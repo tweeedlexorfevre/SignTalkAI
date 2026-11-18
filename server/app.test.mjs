@@ -290,3 +290,72 @@ test('personal gestures are stored per account, grouped in sets and shared by it
   await once(ws.ws, 'close');
   await new Promise((r) => setTimeout(r, 50));
 });
+
+test('static files: content ETags with 304, precompressed .br/.gz chosen by Accept-Encoding', async () => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { brotliCompressSync, gzipSync, brotliDecompressSync, gunzipSync } = await import('node:zlib');
+  const { request } = await import('node:http');
+  const root = await mkdtemp(join(tmpdir(), 'signtalk-static-'));
+  const wasm = Buffer.alloc(64 * 1024, 7);
+  await mkdir(join(root, 'vendor'), { recursive: true });
+  await writeFile(join(root, 'index.html'), '<!doctype html><title>t</title>');
+  await writeFile(join(root, 'vendor', 'rt.wasm'), wasm);
+  await writeFile(join(root, 'vendor', 'rt.wasm.br'), brotliCompressSync(wasm));
+  await writeFile(join(root, 'vendor', 'rt.wasm.gz'), gzipSync(wasm));
+  const site = createApp({ databasePath: ':memory:', staticRoot: root, env: {} });
+  await site.ready;
+  site.server.listen(0, '127.0.0.1');
+  await once(site.server, 'listening');
+  const port = site.server.address().port;
+  // node:http, not fetch: fetch would decode the body and hide Content-Encoding.
+  const get = (path, headers = {}) =>
+    new Promise((resolve, reject) => {
+      request({ host: '127.0.0.1', port, path, headers }, (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+      }).on('error', reject).end();
+    });
+  try {
+    const plain = await get('/vendor/rt.wasm');
+    assert.equal(plain.status, 200);
+    assert.equal(plain.headers['content-encoding'], undefined);
+    assert.equal(plain.headers['content-type'], 'application/wasm');
+    assert.equal(plain.headers['cache-control'], 'no-cache');
+    assert.equal(plain.headers.vary, 'Accept-Encoding');
+    assert.ok(plain.body.equals(wasm));
+    assert.match(plain.headers.etag, /^"[\w-]+"$/);
+
+    const br = await get('/vendor/rt.wasm', { 'Accept-Encoding': 'gzip, deflate, br' });
+    assert.equal(br.headers['content-encoding'], 'br');
+    assert.ok(brotliDecompressSync(br.body).equals(wasm));
+    assert.notEqual(br.headers.etag, plain.headers.etag);
+
+    const gz = await get('/vendor/rt.wasm', { 'Accept-Encoding': 'gzip, br;q=0' });
+    assert.equal(gz.headers['content-encoding'], 'gzip');
+    assert.ok(gunzipSync(gz.body).equals(wasm));
+
+    // Revalidation: the same ETag gets an empty 304, a stale one the full file.
+    const again = await get('/vendor/rt.wasm', { 'Accept-Encoding': 'br', 'If-None-Match': br.headers.etag });
+    assert.equal(again.status, 304);
+    assert.equal(again.body.length, 0);
+    assert.equal(again.headers.etag, br.headers.etag);
+    assert.equal((await get('/vendor/rt.wasm', { 'Accept-Encoding': 'br', 'If-None-Match': '"old"' })).status, 200);
+
+    // A changed file gets a new ETag.
+    await writeFile(join(root, 'index.html'), '<!doctype html><title>t2</title>');
+    const html = await get('/');
+    await writeFile(join(root, 'index.html'), '<!doctype html><title>t3</title>');
+    const html2 = await get('/', { 'If-None-Match': html.headers.etag });
+    assert.equal(html2.status, 200);
+    assert.equal(html2.body.toString(), '<!doctype html><title>t3</title>');
+
+    assert.equal((await get('/missing.wasm')).status, 404);
+    assert.equal((await get('/..%2f..%2fetc%2fpasswd')).status, 403);
+  } finally {
+    await site.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

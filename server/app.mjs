@@ -6,30 +6,14 @@
 //
 // Storage: DATABASE_URL (PostgreSQL, e.g. Supabase) when set, otherwise a local SQLite file.
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
-import { extname, resolve, sep } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { openDatabase } from './db.mjs';
 import { openPostgres } from './db-pg.mjs';
 import { Hub } from './realtime.mjs';
 import { createApi, sendJson } from './api.mjs';
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.wasm': 'application/wasm',
-  '.onnx': 'application/octet-stream',
-  '.task': 'application/octet-stream',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.ico': 'image/x-icon',
-  '.txt': 'text/plain; charset=utf-8',
-};
+import { createStaticHandler } from './static.mjs';
 
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -53,45 +37,7 @@ export function createApp({
   const hub = new Hub({ store, now, ...(ringTimeoutMs ? { ringTimeoutMs } : {}) });
   const trustProxy = env.TRUST_PROXY === '1' || !!env.RENDER;
   const api = createApi({ store, hub, now, env, trustProxy, ...(authLimit ? { authLimit } : {}) });
-  const root = resolve(staticRoot);
-
-  async function serveStatic(req, res) {
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      res.writeHead(405, SECURITY_HEADERS);
-      res.end();
-      return;
-    }
-    let path;
-    try {
-      path = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
-    } catch {
-      res.writeHead(400, SECURITY_HEADERS);
-      res.end();
-      return;
-    }
-    const file = resolve(root, '.' + (path === '/' ? '/index.html' : path));
-    if (!file.startsWith(root + sep)) {
-      res.writeHead(403, SECURITY_HEADERS);
-      res.end();
-      return;
-    }
-    try {
-      const info = await stat(file);
-      if (!info.isFile()) throw Error('not a file');
-      const hashed = path.startsWith('/assets/');
-      res.writeHead(200, {
-        ...SECURITY_HEADERS,
-        'Content-Type': MIME[extname(file)] ?? 'application/octet-stream',
-        'Content-Length': info.size,
-        'Cache-Control': hashed ? 'public, max-age=31536000, immutable' : 'no-cache',
-      });
-      if (req.method === 'HEAD') res.end();
-      else res.end(await readFile(file));
-    } catch {
-      res.writeHead(404, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('Not found');
-    }
-  }
+  const serveStatic = createStaticHandler(staticRoot, SECURITY_HEADERS);
 
   const server = createServer(async (req, res) => {
     try {
