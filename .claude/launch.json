@@ -1,0 +1,42 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "signtalk",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "server/app.mjs"
+      ],
+      "port": 5331
+    },
+    {
+      "name": "signtalk-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "tools/dev.mjs"
+      ],
+      "port": 5330
+    },
+    {
+      "name": "signtalk-tunnel",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "TRUST_PROXY=1",
+        "PORT=5332",
+        "DATABASE_PATH=data/tunnel.db",
+        "node",
+        "server/app.mjs"
+      ],
+      "port": 5332
+    },
+    {
+      "name": "signtalk-5338",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "server/app.mjs",
+        "5338"
+      ],
+      "port": 5338
+    }
+  ]
+}

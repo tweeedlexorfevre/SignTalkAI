@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300..800&amp;family=Onest:wght@300..800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<script src="./hand.js"></script>
+<style>
+html,body{margin:0;background:#f1ece2;color:#16130e;font-family:'Onest',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+button,input,textarea,select{font:inherit;color:inherit;border-radius:0}
+button{cursor:pointer}
+p,h1,h2,h3,ol,ul{margin:0;padding:0}
+li{list-style:none}
+a{color:#b93a0b;text-decoration:underline;text-underline-offset:3px}
+a:hover{color:#16130e}
+::selection{background:#ff5a1f;color:#16130e}
+:focus-visible{outline:2px solid #ff5a1f;outline-offset:2px}
+</style>
+</helmet>
+<div ref="{{ rootRef }}" style="min-height:100vh;background:#f1ece2;display:flex;flex-direction:column">
+
+<div style="display:flex;align-items:stretch;background:#16130e;color:#f2ede4;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;overflow-x:auto">
+  <div style="display:flex;align-items:center;gap:8px;padding:0 16px;white-space:nowrap;border-right:1px solid rgba(242,237,228,.18);color:rgba(242,237,228,.6)">{{ t.mock }}</div>
+  <sc-for list="{{ screens }}" as="s" hint-placeholder-count="7">
+    <button onClick="{{ s.go }}" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:0;border-right:1px solid rgba(242,237,228,.18);background:{{ s.bg }};color:{{ s.fg }};white-space:nowrap;font:inherit;letter-spacing:inherit;text-transform:inherit" style-hover="box-shadow:inset 0 -2px 0 #ff5a1f"><span style="color:{{ s.nc }}">{{ s.n }}</span><span>{{ s.label }}</span></button>
+  </sc-for>
+</div>
+
+<header style="display:flex;flex-wrap:wrap;align-items:stretch;min-height:68px;border-bottom:2px solid #16130e;background:#f1ece2">
+  <button onClick="{{ goChats }}" style="display:flex;align-items:center;gap:10px;padding:0 24px;border:0;background:transparent;font-family:'Unbounded',sans-serif;font-weight:600;font-size:20px;letter-spacing:-.04em">
+    <x-import component-from-global-scope="st-hand" mode="mark" style="width:34px;height:34px;color:#16130e" hint-size="34px,34px"></x-import>
+    <span>SignTalk<span style="color:#ff5a1f">.</span></span>
+  </button>
+  <nav style="flex:1 1 auto;display:flex;min-height:68px;border-left:2px solid #16130e;border-bottom:2px solid #16130e;margin-bottom:-2px">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="4">
+      <button onClick="{{ n.go }}" style="display:flex;align-items:center;gap:10px;padding:0 16px;border:0;border-right:2px solid #16130e;background:{{ n.bg }};color:{{ n.fg }};font-size:15px;font-weight:600;white-space:nowrap" style-hover="box-shadow:inset 0 -4px 0 #ff5a1f">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:{{ n.ic }}">{{ n.idx }}</span>
+        <x-import component-from-global-scope="st-icon" icon="{{ n.icon }}" size="18" hint-size="18px,18px"></x-import>
+        <span>{{ n.label }}</span>
+        <sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px;height:22px;padding:0 6px;display:grid;place-items:center;background:#ff5a1f;color:#16130e;font-family:'JetBrains Mono',monospace;font-size:11px">{{ n.badge }}</span></sc-if>
+      </button>
+    </sc-for>
+  </nav>
+  <div style="display:flex;align-items:stretch;min-height:68px;margin-left:auto;border-left:2px solid #16130e;border-bottom:2px solid #16130e;margin-bottom:-2px">
+    <div style="display:flex;align-items:center;gap:0;padding:0 14px;border-right:2px solid #16130e">
+      <x-import component-from-global-scope="st-icon" icon="globe" size="15" style="margin-right:8px;color:#675f52" hint-size="15px,15px"></x-import>
+      <button onClick="{{ setKk }}" style="height:32px;padding:0 10px;border:1.5px solid #16130e;background:{{ lng.kkBg }};color:{{ lng.kkFg }};font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500">ҚАЗ</button>
+      <button onClick="{{ setRu }}" style="height:32px;padding:0 10px;border:1.5px solid #16130e;border-left:0;background:{{ lng.ruBg }};color:{{ lng.ruFg }};font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500">РУС</button>
+    </div>
+    <button aria-label="Настройки" style="display:grid;place-items:center;width:64px;border:0;border-right:2px solid #16130e;background:transparent" style-hover="background:#e9e2d4">
+      <x-import component-from-global-scope="st-icon" icon="settings-2" size="19" hint-size="19px,19px"></x-import>
+    </button>
+    <button onClick="{{ goProfile }}" style="display:flex;align-items:center;gap:10px;padding:0 20px 0 14px;border:0;background:{{ chip.bg }};color:{{ chip.fg }};font-weight:600;font-size:14px;white-space:nowrap" style-hover="box-shadow:inset 0 -4px 0 #ff5a1f">
+      <span style="width:32px;height:32px;display:grid;place-items:center;background:#ff5a1f;color:#16130e;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600">{{ chip.ini }}</span>
+      <span>{{ chip.label }}</span>
+    </button>
+  </div>
+</header>
+
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;padding:30px 32px 26px;border-bottom:2px solid #16130e">
+  <div style="display:grid;gap:16px;min-width:0">
+    <p data-enter="" style="display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span style="color:#16130e;font-weight:500">{{ kicker }}</span><span data-enter="rule" style="display:block;width:56px;height:2px;background:#ff5a1f"></span><span>{{ t.kicker }}</span></p>
+    <h1 data-enter="" style="font-family:'Unbounded',sans-serif;font-weight:600;font-size:clamp(34px,4.6vw,66px);line-height:1;letter-spacing:-.055em;text-wrap:balance">{{ title }}</h1>
+  </div>
+  <div data-enter="" style="display:flex;gap:0">
+    <button onClick="{{ toggleLarge }}" aria-pressed="{{ large }}" aria-label="Крупный текст" style="width:46px;height:46px;border:2px solid #16130e;background:{{ a11y.largeBg }};color:{{ a11y.largeFg }};font-weight:700;font-size:15px">Aa</button>
+    <button onClick="{{ toggleContrast }}" aria-pressed="{{ contrast }}" aria-label="Высокий контраст" style="width:46px;height:46px;display:grid;place-items:center;border:2px solid #16130e;border-left:0;background:{{ a11y.conBg }};color:{{ a11y.conFg }}">
+      <x-import component-from-global-scope="st-icon" icon="eye" size="18" hint-size="18px,18px"></x-import>
+    </button>
+  </div>
+</div>
+
+<main style="flex:1;padding:32px;zoom:{{ zoom }};filter:{{ filter }}">
+
+<sc-if value="{{ is.auth }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;border:2px solid #16130e">
+  <section style="position:relative;overflow:hidden;isolation:isolate;flex:1.4 1 540px;min-height:680px;display:flex;flex-direction:column;padding:36px;background:#16130e;color:#f2ede4">
+    <x-import component-from-global-scope="st-dots" ink="242,237,228" alpha="0.09" style="position:absolute;inset:0;z-index:-2" hint-size="100%,100%"></x-import>
+    <x-import component-from-global-scope="st-hand" mode="hero" pose="{{ demo.pose }}" labels="{{ labels }}" style="position:absolute;right:-30px;top:30px;width:min(560px,66%);height:560px;z-index:-1;color:#f2ede4" hint-size="560px,560px"></x-import>
+    <span data-enter="" style="align-self:flex-start;display:inline-flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border:1.5px solid rgba(242,237,228,.3);font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase"><span data-loop="pulse" style="width:8px;height:8px;border-radius:50%;background:#ff5a1f"></span>{{ t.badge }}</span>
+    <h2 data-enter="" style="max-width:560px;margin-top:40px;font-family:'Unbounded',sans-serif;font-size:clamp(32px,3.9vw,54px);font-weight:600;line-height:1.02;letter-spacing:-.05em;text-wrap:balance">{{ t.h2a }}<span style="color:#ff5a1f">{{ t.h2b }}</span></h2>
+    <div style="flex:1;min-height:40px"></div>
+    <div data-enter="" style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1.2fr);max-width:680px;border-top:2px solid #f2ede4;border-bottom:1px solid rgba(242,237,228,.22);background:rgba(22,19,14,.6)">
+      <div style="display:grid;gap:6px;padding:16px 18px 16px 0;border-right:1px solid rgba(242,237,228,.22)">
+        <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(242,237,228,.6)">{{ t.rGesture }} {{ demo.n }} / 10 → {{ t.rText }}</small>
+        <div style="min-height:1.15em;font-family:'Unbounded',sans-serif;font-size:clamp(26px,3vw,40px);font-weight:600;line-height:1.1;letter-spacing:-.045em;color:#ff5a1f"><x-import component-from-global-scope="st-type" text="{{ demo.word }}" hint-size="auto,1em"></x-import></div>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(242,237,228,.6)">{{ demo.alt }}</small>
+      </div>
+      <div style="display:grid;align-content:space-between;gap:6px;padding:16px 18px;border-right:1px solid rgba(242,237,228,.22)">
+        <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(242,237,228,.6)">{{ t.rPoints }}</small>
+        <b style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500">21<span style="color:rgba(242,237,228,.45)">/21</span></b>
+      </div>
+      <div style="display:grid;align-content:space-between;gap:10px;padding:16px 18px">
+        <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(242,237,228,.6)">{{ t.rConf }}</small>
+        <b style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500">{{ demo.pct }}</b>
+        <div style="height:4px;background:rgba(242,237,228,.18)"><div style="height:100%;width:{{ demo.pct }};background:#ff5a1f;transition:width .9s cubic-bezier(.2,.7,.1,1)"></div></div>
+      </div>
+    </div>
+    <ol style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:28px;max-width:680px">
+      <sc-for list="{{ features }}" as="f" hint-placeholder-count="3">
+        <li data-enter="" style="display:grid;gap:8px;padding:14px 16px 0 0;border-top:1px solid rgba(242,237,228,.22);font-size:14px;line-height:1.5;color:rgba(242,237,228,.78)"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#ff5a1f">{{ f.n }}</span><span>{{ f.text }}</span></li>
+      </sc-for>
+    </ol>
+  </section>
+
+  <form onSubmit="{{ prevent }}" style="flex:1 1 380px;display:grid;align-content:start;gap:20px;padding:36px;background:#fbf8f2;border-left:2px solid #16130e">
+    <div data-enter="" style="display:grid;grid-template-columns:1fr 1fr;border:2px solid #16130e">
+      <button type="button" onClick="{{ setLogin }}" style="min-height:50px;padding:0 16px;text-align:left;border:0;background:{{ tabs.lBg }};color:{{ tabs.lFg }};font-weight:600"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;margin-right:10px;color:#ff5a1f">01</span>{{ t.tabLogin }}</button>
+      <button type="button" onClick="{{ setReg }}" style="min-height:50px;padding:0 16px;text-align:left;border:0;border-left:2px solid #16130e;background:{{ tabs.rBg }};color:{{ tabs.rFg }};font-weight:600"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;margin-right:10px;color:#ff5a1f">02</span>{{ t.tabReg }}</button>
+    </div>
+    <sc-if value="{{ tabs.isLogin }}" hint-placeholder-val="{{ true }}">
+      <label data-enter="" style="display:grid;gap:8px;font-size:13px;font-weight:600">{{ t.fLogin }}
+        <input placeholder="aliya / ST-7KQ2MX" autocomplete="username" style="width:100%;min-height:54px;padding:0 16px;border:1.5px solid #c4b9a4;background:#f1ece2;font-size:16px;font-weight:400;font-family:'JetBrains Mono',monospace;outline:none" style-focus="border-color:#16130e;box-shadow:0 0 0 3px rgba(255,90,31,.28)">
+      </label>
+    </sc-if>
+    <sc-if value="{{ tabs.isReg }}" hint-placeholder-val="{{ false }}">
+      <label data-enter="" style="display:grid;gap:8px;font-size:13px;font-weight:600">{{ t.fName }}
+        <input autocomplete="name" style="width:100%;min-height:54px;padding:0 16px;border:1.5px solid #c4b9a4;background:#f1ece2;font-size:16px;font-weight:400;outline:none" style-focus="border-color:#16130e;box-shadow:0 0 0 3px rgba(255,90,31,.28)">
+      </label>
+      <label data-enter="" style="display:grid;gap:8px;font-size:13px;font-weight:600">{{ t.fUser }}
+        <input autocomplete="username" style="width:100%;min-height:54px;padding:0 16px;border:1.5px solid #c4b9a4;background:#f1ece2;font-size:16px;font-weight:400;font-family:'JetBrains Mono',monospace;outline:none" style-focus="border-color:#16130e;box-shadow:0 0 0 3px rgba(255,90,31,.28)">
+        <small style="font-weight:400;font-size:12px;color:#675f52">{{ t.fUserHint }}</small>
+      </label>
+    </sc-if>
+    <label data-enter="" style="display:grid;gap:8px;font-size:13px;font-weight:600">{{ t.fPass }}
+      <span style="position:relative;display:block">
+        <input type="{{ passType }}" autocomplete="current-password" style="width:100%;min-height:54px;padding:0 56px 0 16px;border:1.5px solid #c4b9a4;background:#f1ece2;font-size:16px;font-weight:400;outline:none" style-focus="border-color:#16130e;box-shadow:0 0 0 3px rgba(255,90,31,.28)">
+        <button type="button" onClick="{{ togglePass }}" aria-label="Показать пароль" style="position:absolute;top:0;right:0;width:54px;height:54px;display:grid;place-items:center;border:0;border-left:1.5px solid #c4b9a4;background:transparent;color:#675f52" style-hover="color:#16130e">
+          <x-import component-from-global-scope="st-icon" icon="{{ passIcon }}" size="18" hint-size="18px,18px"></x-import>
+        </button>
+      </span>
+      <sc-if value="{{ tabs.isReg }}" hint-placeholder-val="{{ false }}"><small style="font-weight:400;font-size:12px;color:#675f52">{{ t.fPassHint }}</small></sc-if>
+    </label>
+    <button data-enter="" type="submit" style="display:flex;justify-content:space-between;align-items:center;min-height:58px;margin-top:4px;padding:0 18px;border:2px solid #ff5a1f;background:#ff5a1f;color:#16130e;font-size:16px;font-weight:650;text-align:left;transition:background .2s,color .2s" style-hover="background:#16130e;color:#f1ece2;border-color:#16130e" style-active="transform:translateY(1px)">
+      <span>{{ submitLabel }}</span>
+      <x-import component-from-global-scope="st-icon" icon="arrow-right" size="20" hint-size="20px,20px"></x-import>
+    </button>
+    <p data-enter="" style="font-size:13px;color:#675f52;line-height:1.5">{{ authSwitch.q }}<button type="button" onClick="{{ authSwitch.go }}" style="padding:0;border:0;background:none;color:#b93a0b;font-weight:650;text-decoration:underline;text-underline-offset:3px">{{ authSwitch.link }}</button></p>
+    <div data-enter="" style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding-top:18px;border-top:2px solid #16130e">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 8px;background:#16130e;color:#f1ece2">ST-</span>
+      <p style="font-size:13px;color:#675f52;line-height:1.55">{{ t.idNote }}</p>
+    </div>
+  </form>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.chats }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);height:min(800px,calc(100vh - 140px));min-height:620px;border:2px solid #16130e;background:#fbf8f2">
+  <aside style="display:flex;flex-direction:column;min-height:0;min-width:0">
+    <div data-enter="" style="position:relative;overflow:hidden;margin:14px;padding:20px 18px 16px;display:grid;gap:16px;background:#16130e;color:#f1ece2">
+      <div style="position:absolute;left:0;right:0;top:0;height:4px;background:repeating-linear-gradient(90deg,#ff5a1f 0 10px,transparent 10px 16px)"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="display:grid;gap:8px;min-width:0">
+          <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(241,236,226,.6)">{{ t.myId }}</small>
+          <button onClick="{{ copyId }}" style="display:inline-flex;align-items:center;gap:10px;padding:0;border:0;background:none;color:#f1ece2;font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;letter-spacing:.02em" style-hover="color:#ff5a1f">ST-4FD9QA<x-import component-from-global-scope="st-icon" icon="{{ copyIcon }}" size="16" hint-size="16px,16px"></x-import></button>
+        </div>
+        <x-import component-from-global-scope="st-hand" mode="mark" style="width:46px;height:46px;color:#f1ece2" hint-size="46px,46px"></x-import>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px dashed rgba(241,236,226,.3);font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:rgba(241,236,226,.7)">
+        <span style="display:inline-flex;align-items:center;gap:7px"><span data-loop="pulse" style="width:7px;height:7px;border-radius:50%;background:#2fbf71"></span>{{ t.online }}</span>
+        <span>@daniyar</span>
+      </div>
+    </div>
+    <form onSubmit="{{ prevent }}" data-enter="" style="display:flex;align-items:stretch;margin:0 14px 14px;border:2px solid #16130e;background:#f1ece2">
+      <span style="display:grid;place-items:center;padding:0 4px 0 12px;color:#675f52"><x-import component-from-global-scope="st-icon" icon="search" size="17" hint-size="17px,17px"></x-import></span>
+      <input placeholder="{{ t.findPh }}" style="flex:1;min-width:0;min-height:44px;padding:0 8px;border:0;background:transparent;font-family:'JetBrains Mono',monospace;font-size:13px;outline:none">
+      <button style="padding:0 16px;border:0;background:#16130e;color:#f1ece2;font-size:13px;font-weight:600" style-hover="background:#ff5a1f;color:#16130e">{{ t.findBtn }}</button>
+    </form>
+    <p style="display:flex;justify-content:space-between;padding:10px 18px;border-top:2px solid #16130e;border-bottom:1px solid #ddd4c3;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span>{{ t.contacts }}</span><span>05</span></p>
+    <ul style="flex:1;overflow-y:auto">
+      <sc-for list="{{ contacts }}" as="c" hint-placeholder-count="5">
+        <li data-enter="">
+          <button onClick="{{ c.go }}" style="position:relative;width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;border:0;border-bottom:1px solid #ddd4c3;background:{{ c.bg }};text-align:left" style-hover="background:#e9e2d4">
+            <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#ff5a1f"></span></sc-if>
+            <span style="position:relative;flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;background:{{ c.avBg }};color:{{ c.avFg }};font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600">{{ c.ini }}<sc-if value="{{ c.online }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border-radius:50%;background:#2fbf71;border:2.5px solid #fbf8f2"></span></sc-if></span>
+            <span style="flex:1;min-width:0;display:grid;gap:4px">
+              <span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</b><time style="flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:#675f52">{{ c.time }}</time></span>
+              <span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:13px;color:{{ c.pvColor }};font-weight:{{ c.pvWeight }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.pv }}</span><sc-if value="{{ c.unread }}" hint-placeholder-val="{{ false }}"><span style="min-width:22px;height:22px;padding:0 6px;display:grid;place-items:center;background:#ff5a1f;color:#16130e;font-family:'JetBrains Mono',monospace;font-size:11px">{{ c.unread }}</span></sc-if></span>
+            </span>
+          </button>
+        </li>
+      </sc-for>
+    </ul>
+  </aside>
+
+  <section style="position:relative;isolation:isolate;display:flex;flex-direction:column;min-width:0;min-height:0;background:#f1ece2;border-left:2px solid #16130e">
+    <x-import component-from-global-scope="st-dots" style="position:absolute;inset:0;z-index:-1" hint-size="100%,100%"></x-import>
+    <header style="display:flex;align-items:center;gap:14px;min-height:78px;padding:12px 16px 12px 20px;border-bottom:2px solid #16130e;background:#fbf8f2">
+      <span style="position:relative;flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;background:#16130e;color:#f1ece2;font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600">АС<span style="position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border-radius:50%;background:#2fbf71;border:2.5px solid #fbf8f2"></span></span>
+      <div style="flex:1;min-width:0;display:grid;gap:3px">
+        <b style="font-size:16px;font-weight:650">Алия Сейткали</b>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:{{ thread.stColor }}">{{ thread.status }} · ST-7KQ2MX</small>
+      </div>
+      <button onClick="{{ goCall }}" style="display:flex;align-items:center;gap:22px;min-height:48px;padding:0 16px 0 18px;border:0;background:#16130e;color:#f1ece2;font-size:14px;font-weight:600;transition:background .25s,color .25s" style-hover="background:#ff5a1f;color:#16130e">
+        <span>{{ t.videoCall }}</span>
+        <x-import component-from-global-scope="st-icon" icon="video" size="19" hint-size="19px,19px"></x-import>
+      </button>
+    </header>
+    <div ref="{{ threadRef }}" style="flex:1;overflow-y:auto;padding:24px 28px 18px;scroll-behavior:smooth">
+      <ol style="display:grid;gap:8px">
+        <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="6">
+          <sc-if value="{{ m.isDay }}" hint-placeholder-val="{{ false }}">
+            <li data-enter="" style="display:flex;align-items:center;gap:12px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span style="flex:1;border-top:1.5px dashed #c4b9a4"></span>{{ m.label }}<span style="flex:1;border-top:1.5px dashed #c4b9a4"></span></li>
+          </sc-if>
+          <sc-if value="{{ m.isCall }}" hint-placeholder-val="{{ false }}">
+            <li data-enter="" style="display:flex;align-items:center;gap:10px;margin:14px 0;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#16130e"><span style="flex:1;border-top:1.5px dashed #c4b9a4"></span><x-import component-from-global-scope="st-icon" icon="phone-incoming" size="14" style="color:#1d7247" hint-size="14px,14px"></x-import>{{ m.label }}<span style="color:#675f52">{{ m.time }}</span><span style="flex:1;border-top:1.5px dashed #c4b9a4"></span></li>
+          </sc-if>
+          <sc-if value="{{ m.isBubble }}" hint-placeholder-val="{{ true }}">
+            <li data-enter="{{ m.enter }}" style="display:flex;justify-content:{{ m.justify }}">
+              <div style="max-width:min(76%,560px);padding:{{ m.pad }};background:{{ m.bg }};color:{{ m.fg }};border:1.5px solid {{ m.bd }};overflow-wrap:anywhere">
+                <sc-if value="{{ m.isSign }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;opacity:.75"><x-import component-from-global-scope="st-hand" mode="mark" still="true" style="width:15px;height:15px" hint-size="15px,15px"></x-import>{{ t.signLabel }}</span></sc-if>
+                <sc-if value="{{ m.isSpeech }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;opacity:.7"><x-import component-from-global-scope="st-icon" icon="mic" size="13" hint-size="13px,13px"></x-import>{{ t.speechLabel }}</span></sc-if>
+                <p style="font-family:{{ m.font }};font-size:{{ m.size }};font-weight:{{ m.weight }};letter-spacing:{{ m.ls }};line-height:{{ m.lh }};white-space:pre-wrap">{{ m.text }}</p>
+                <span style="display:flex;justify-content:flex-end;align-items:center;gap:4px;margin-top:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px;opacity:.6">{{ m.time }}<sc-if value="{{ m.mine }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="st-icon" icon="{{ m.tick }}" size="14" hint-size="14px,14px"></x-import></sc-if></span>
+              </div>
+            </li>
+          </sc-if>
+          <sc-if value="{{ m.isSigning }}" hint-placeholder-val="{{ false }}">
+            <li data-enter="pop" style="display:flex">
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 16px 8px 8px;background:#fbd9c6;border:1.5px dashed #ff5a1f">
+                <x-import component-from-global-scope="st-hand" mode="track" pose="{{ m.pose }}" style="width:44px;height:44px;color:#16130e" hint-size="44px,44px"></x-import>
+                <span style="font-size:14px;font-weight:600">Алия {{ t.signing }}</span>
+                <span style="display:flex;gap:4px"><span data-loop="blink" data-delay="0" style="width:6px;height:6px;border-radius:50%;background:#ff5a1f"></span><span data-loop="blink" data-delay="180" style="width:6px;height:6px;border-radius:50%;background:#ff5a1f"></span><span data-loop="blink" data-delay="360" style="width:6px;height:6px;border-radius:50%;background:#ff5a1f"></span></span>
+              </div>
+            </li>
+          </sc-if>
+        </sc-for>
+      </ol>
+    </div>
+    <div style="display:grid;gap:10px;padding:12px 16px 16px;border-top:2px solid #16130e;background:#fbf8f2">
+      <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+        <sc-for list="{{ phrases }}" as="q" hint-placeholder-count="6">
+          <button onClick="{{ q.go }}" style="flex-shrink:0;min-height:36px;padding:0 14px;border:1.5px solid #c4b9a4;background:transparent;font-size:13px;white-space:nowrap;transition:background .2s,color .2s,border-color .2s" style-hover="background:#16130e;color:#f1ece2;border-color:#16130e">{{ q.text }}</button>
+        </sc-for>
+      </div>
+      <form onSubmit="{{ submitDraft }}" style="display:flex;align-items:stretch;border:2px solid #16130e;background:#f1ece2">
+        <textarea value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" rows="1" placeholder="{{ t.msgPh }}" style="flex:1;min-height:50px;max-height:140px;resize:none;padding:14px 16px;border:0;background:transparent;font-size:16px;line-height:1.4;outline:none"></textarea>
+        <button type="submit" aria-label="Отправить" style="width:54px;flex-shrink:0;display:grid;place-items:center;border:0;border-left:2px solid #16130e;background:{{ sendBg }};color:#16130e;transition:background .2s" style-hover="background:#16130e;color:#ff5a1f">
+          <x-import component-from-global-scope="st-icon" icon="arrow-up" size="20" hint-size="20px,20px"></x-import>
+        </button>
+      </form>
+    </div>
+  </section>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.call }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);height:min(780px,calc(100vh - 140px));min-height:640px;border:2px solid #16130e;background:#12100d">
+  <div style="position:relative;overflow:hidden;isolation:isolate;color:#f2ede4">
+    <x-import component-from-global-scope="st-dots" ink="242,237,228" alpha="0.06" style="position:absolute;inset:0;z-index:-2" hint-size="100%,100%"></x-import>
+    <x-import component-from-global-scope="st-hand" mode="track" pose="{{ call.pose }}" labels="{{ labels }}" tag="АЛИЯ · 21 PTS" style="position:absolute;left:12%;top:8%;width:min(520px,58%);height:78%;z-index:-1;color:#f2ede4" hint-size="520px,520px"></x-import>
+    <div data-enter="" style="position:absolute;left:24px;top:22px;right:24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+      <div style="display:grid;gap:4px"><b style="font-family:'Unbounded',sans-serif;font-size:22px;font-weight:600;letter-spacing:-.04em">Алия Сейткали</b><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(242,237,228,.7)">{{ call.timer }}</span></div>
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1.5px solid rgba(242,237,228,.3);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase"><span data-loop="pulse" style="width:7px;height:7px;border-radius:50%;background:#ff5a1f"></span>KRSL · 10</span>
+    </div>
+    <div style="position:absolute;left:24px;right:300px;bottom:120px;display:grid;justify-items:start;gap:8px">
+      <sc-if value="{{ call.peerSigning }}" hint-placeholder-val="{{ false }}">
+        <p data-enter="pop" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(18,16,13,.85);border:1.5px dashed #ff5a1f;font-size:15px;font-weight:600"><x-import component-from-global-scope="st-icon" icon="hand" size="16" style="color:#ff5a1f" hint-size="16px,16px"></x-import>{{ t.peerSigning }}</p>
+      </sc-if>
+      <sc-if value="{{ call.showSub }}" hint-placeholder-val="{{ true }}">
+        <p data-enter="pop" style="display:inline-flex;align-items:center;gap:14px;padding:14px 22px 14px 16px;background:#ff5a1f;color:#16130e;font-family:'Unbounded',sans-serif;font-size:clamp(26px,3vw,40px);font-weight:600;letter-spacing:-.04em;line-height:1.1"><x-import component-from-global-scope="st-icon" icon="hand" size="26" hint-size="26px,26px"></x-import><x-import component-from-global-scope="st-type" text="{{ call.sub }}" caret="#16130e" hint-size="auto,1em"></x-import></p>
+      </sc-if>
+    </div>
+    <div style="position:absolute;right:24px;bottom:110px;width:240px;height:168px;overflow:hidden;border:2px solid #f2ede4;background:#1d1b18">
+      <x-import component-from-global-scope="st-hand" mode="track" pose="{{ call.selfPose }}" tag="ВЫ" style="position:absolute;inset:10px 30px;color:#f2ede4" hint-size="180px,148px"></x-import>
+      <span style="position:absolute;left:0;top:0;display:inline-flex;align-items:center;gap:6px;padding:5px 9px;background:{{ call.chipBg }};color:#16130e;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;transition:background .3s"><x-import component-from-global-scope="st-icon" icon="hand" size="12" hint-size="12px,12px"></x-import>{{ call.chip }}</span>
+      <span style="position:absolute;left:0;bottom:0;padding:5px 10px;background:#16130e;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:600;color:#ff5a1f">{{ call.selfWord }}</span>
+    </div>
+    <div data-enter="" role="toolbar" style="position:absolute;left:24px;bottom:24px;display:flex;border:2px solid rgba(242,237,228,.28);background:rgba(18,16,13,.85)">
+      <button aria-label="Микрофон" style="width:60px;height:60px;display:grid;place-items:center;border:0;border-right:1.5px solid rgba(242,237,228,.2);background:transparent;color:#f2ede4" style-hover="background:rgba(242,237,228,.1)"><x-import component-from-global-scope="st-icon" icon="mic" size="22" hint-size="22px,22px"></x-import></button>
+      <button aria-label="Камера" style="width:60px;height:60px;display:grid;place-items:center;border:0;border-right:1.5px solid rgba(242,237,228,.2);background:transparent;color:#f2ede4" style-hover="background:rgba(242,237,228,.1)"><x-import component-from-global-scope="st-icon" icon="video" size="22" hint-size="22px,22px"></x-import></button>
+      <button onClick="{{ tgTranslate }}" aria-label="Перевод жестов" style="width:60px;height:60px;display:grid;place-items:center;border:0;border-right:1.5px solid rgba(242,237,228,.2);background:{{ call.trBg }};color:{{ call.trFg }}"><x-import component-from-global-scope="st-icon" icon="hand" size="22" hint-size="22px,22px"></x-import></button>
+      <button onClick="{{ tgSpeech }}" aria-label="Субтитры речи" style="width:60px;height:60px;display:grid;place-items:center;border:0;border-right:1.5px solid rgba(242,237,228,.2);background:{{ call.spBg }};color:{{ call.spFg }}"><x-import component-from-global-scope="st-icon" icon="captions" size="22" hint-size="22px,22px"></x-import></button>
+      <button onClick="{{ goChats }}" aria-label="Завершить звонок" style="height:60px;display:flex;align-items:center;gap:18px;padding:0 18px;border:0;background:#b42318;color:#fff;font-weight:650" style-hover="background:#8f1b12"><span>{{ t.hangup }}</span><x-import component-from-global-scope="st-icon" icon="phone-off" size="22" hint-size="22px,22px"></x-import></button>
+    </div>
+  </div>
+
+  <aside style="display:flex;flex-direction:column;min-height:0;overflow-y:auto;background:#fbf8f2;color:#16130e;border-left:2px solid #16130e">
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:62px;padding:0 18px;border-bottom:2px solid #16130e"><b style="font-family:'Unbounded',sans-serif;font-size:16px;font-weight:600;letter-spacing:-.03em">{{ t.panelTitle }}</b><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#675f52">P2P</span></div>
+    <section data-enter="" style="display:grid;gap:12px;padding:18px;border-bottom:2px solid #16130e">
+      <h3 style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span style="color:#ff5a1f">01</span>{{ t.signToText }}</h3>
+      <sc-for list="{{ toggles.sign }}" as="g" hint-placeholder-count="2">
+        <button onClick="{{ g.go }}" style="display:flex;align-items:center;gap:12px;padding:0;border:0;background:none;text-align:left;font-size:14px">
+          <span style="flex-shrink:0;position:relative;width:40px;height:22px;border:2px solid #16130e;background:{{ g.bg }};transition:background .25s"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:#16130e;transform:translateX({{ g.kx }});transition:transform .25s cubic-bezier(.2,.7,.1,1)"></span></span>
+          <span>{{ g.label }}</span>
+        </button>
+      </sc-for>
+      <div style="display:grid;grid-template-columns:1fr 1fr;border:1.5px solid #c4b9a4">
+        <div style="padding:8px 10px;border-right:1.5px solid #c4b9a4"><small style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#675f52">{{ t.model }}</small><b style="font-size:13px;font-weight:600">KRSL · 10</b></div>
+        <div style="padding:8px 10px"><small style="display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#675f52">{{ t.textLang }}</small><b style="font-size:13px;font-weight:600">{{ t.langName }}</b></div>
+      </div>
+      <div style="display:grid;gap:10px;padding:14px;background:#16130e;color:#f1ece2">
+        <p style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap"><b style="font-family:'Unbounded',sans-serif;font-size:24px;font-weight:600;letter-spacing:-.04em;color:#ff5a1f">{{ call.selfWord }}</b><small style="font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(241,236,226,.65)">· {{ t.sent }}</small></p>
+        <sc-for list="{{ call.guesses }}" as="g" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px">
+            <div style="display:grid;gap:4px"><span>{{ g.word }}</span><div style="height:3px;background:rgba(241,236,226,.15)"><div style="height:100%;width:{{ g.pct }};background:{{ g.color }};transition:width .9s cubic-bezier(.2,.7,.1,1)"></div></div></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right">{{ g.pct }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <p style="font-size:12px;line-height:1.5;color:#675f52">{{ t.privacy }}</p>
+    </section>
+    <section data-enter="" style="display:grid;gap:12px;padding:18px;border-bottom:2px solid #16130e">
+      <h3 style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span style="color:#ff5a1f">02</span>{{ t.speechH }}</h3>
+      <sc-for list="{{ toggles.speech }}" as="g" hint-placeholder-count="2">
+        <button onClick="{{ g.go }}" style="display:flex;align-items:center;gap:12px;padding:0;border:0;background:none;text-align:left;font-size:14px">
+          <span style="flex-shrink:0;position:relative;width:40px;height:22px;border:2px solid #16130e;background:{{ g.bg }};transition:background .25s"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;background:#16130e;transform:translateX({{ g.kx }});transition:transform .25s cubic-bezier(.2,.7,.1,1)"></span></span>
+          <span>{{ g.label }}</span>
+        </button>
+      </sc-for>
+    </section>
+    <section style="flex:1;display:flex;flex-direction:column;gap:12px;padding:18px">
+      <h3 style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span style="color:#ff5a1f">03</span>{{ t.transcriptH }}</h3>
+      <ol style="display:grid;gap:6px">
+        <sc-for list="{{ call.transcript }}" as="r" hint-placeholder-count="4">
+          <li data-enter="{{ r.enter }}" style="display:flex;justify-content:{{ r.justify }}"><span style="max-width:85%;padding:7px 11px;background:{{ r.bg }};color:{{ r.fg }};border:1.5px solid {{ r.bd }};font-family:{{ r.font }};font-size:{{ r.size }};font-weight:{{ r.weight }};letter-spacing:{{ r.ls }}">{{ r.text }}</span></li>
+        </sc-for>
+      </ol>
+      <form onSubmit="{{ prevent }}" style="display:flex;margin-top:auto;border:2px solid #16130e;background:#f1ece2">
+        <input placeholder="{{ t.write }}" style="flex:1;min-width:0;min-height:44px;padding:0 12px;border:0;background:transparent;outline:none;font-size:14px">
+        <button style="width:46px;display:grid;place-items:center;border:0;border-left:2px solid #16130e;background:#ff5a1f;color:#16130e" style-hover="background:#16130e;color:#ff5a1f"><x-import component-from-global-scope="st-icon" icon="send" size="17" hint-size="17px,17px"></x-import></button>
+      </form>
+    </section>
+  </aside>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.rec }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;gap:16px">
+  <div data-enter="" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding:16px 20px;border:2px solid #16130e;background:#fbf8f2">
+    <b style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">{{ t.noteTitle }}</b>
+    <p style="flex:1 1 380px;font-size:14px;line-height:1.55;color:#675f52">{{ t.noteText }}</p>
+    <button onClick="{{ goDict }}" style="padding:0;border:0;background:none;color:#b93a0b;font-weight:650;text-decoration:underline;text-underline-offset:3px">{{ t.noteLink }} →</button>
+  </div>
+  <div data-enter="" style="display:flex;flex-wrap:wrap;align-items:stretch;gap:12px">
+    <div style="display:flex;border:2px solid #16130e">
+      <button onClick="{{ setCloud }}" style="min-height:44px;padding:0 16px;border:0;background:{{ eng.cBg }};color:{{ eng.cFg }};font-weight:600;font-size:14px">{{ t.engineCloud }}</button>
+      <button onClick="{{ setLocal }}" style="min-height:44px;padding:0 16px;border:0;border-left:2px solid #16130e;background:{{ eng.lBg }};color:{{ eng.lFg }};font-weight:600;font-size:14px">{{ t.engineLocal }}</button>
+    </div>
+    <div style="display:grid;align-content:center;padding:0 14px;border:1.5px solid #c4b9a4;background:#fbf8f2"><small style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#675f52">{{ t.signLang }}</small><b style="font-size:14px;font-weight:600">{{ t.krslOpt }}</b></div>
+    <div style="display:grid;align-content:center;padding:0 14px;border:1.5px solid #c4b9a4;background:#fbf8f2"><small style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#675f52">{{ t.outLang }}</small><b style="font-size:14px;font-weight:600">{{ t.langName }}</b></div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;border:2px solid #16130e;background:#fbf8f2">
+    <div style="flex:1.5 1 560px;display:flex;flex-direction:column;min-width:0">
+      <div style="position:relative;overflow:hidden;isolation:isolate;aspect-ratio:4/3;max-height:620px;background:#12100d;color:#f2ede4">
+        <x-import component-from-global-scope="st-dots" ink="242,237,228" alpha="0.07" style="position:absolute;inset:0;z-index:-2" hint-size="100%,100%"></x-import>
+        <x-import component-from-global-scope="st-hand" mode="track" pose="{{ rec.pose }}" labels="{{ labels }}" style="position:absolute;left:18%;top:8%;width:64%;height:72%;z-index:-1;color:#f2ede4" hint-size="400px,400px"></x-import>
+        <span style="position:absolute;left:20px;top:20px;width:28px;height:28px;border-left:2px solid #ff5a1f;border-top:2px solid #ff5a1f"></span>
+        <span style="position:absolute;right:20px;top:20px;width:28px;height:28px;border-right:2px solid #ff5a1f;border-top:2px solid #ff5a1f"></span>
+        <span style="position:absolute;left:20px;bottom:110px;width:28px;height:28px;border-left:2px solid #ff5a1f;border-bottom:2px solid #ff5a1f"></span>
+        <span style="position:absolute;right:20px;bottom:110px;width:28px;height:28px;border-right:2px solid #ff5a1f;border-bottom:2px solid #ff5a1f"></span>
+        <span style="position:absolute;left:58px;top:26px;display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase"><span data-loop="blink" data-delay="0" style="width:8px;height:8px;border-radius:50%;background:#ff5a1f"></span>{{ t.recLabel }}</span>
+        <span style="position:absolute;right:58px;top:26px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(242,237,228,.7)">30 FPS · 21 · KRSL</span>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:92px;padding:10px 20px 12px;border-top:1px solid rgba(242,237,228,.18);background:rgba(18,16,13,.75);display:grid;grid-template-rows:auto 1fr;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(242,237,228,.65)"><span>{{ t.motion }}</span><span>- - - {{ t.threshold }}</span></div>
+          <x-import component-from-global-scope="st-wave" style="width:100%;height:100%" hint-size="100%,56px"></x-import>
+        </div>
+      </div>
+      <ol style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:2px solid #16130e">
+        <sc-for list="{{ rec.pipe }}" as="p" hint-placeholder-count="5">
+          <li style="position:relative;display:grid;gap:4px;padding:14px 14px 12px;border-right:{{ p.br }};background:{{ p.bg }};color:{{ p.fg }};transition:background .35s,color .35s">
+            <span style="position:absolute;left:0;right:0;top:-2px;height:4px;background:{{ p.bar }}"></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ p.nc }}">{{ p.n }}</span>
+            <b style="font-size:13px;font-weight:600">{{ p.label }}</b>
+          </li>
+        </sc-for>
+      </ol>
+    </div>
+    <div style="flex:1 1 340px;display:flex;flex-direction:column;border-left:2px solid #16130e;min-width:0">
+      <div style="display:flex;justify-content:space-between;padding:16px 22px;border-bottom:2px solid #16130e;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52"><span>{{ t.result }}</span><span>{{ rec.n }} / 10</span></div>
+      <div style="display:grid;gap:10px;padding:26px 22px 22px;background:#ff5a1f;color:#16130e">
+        <div style="min-height:1.1em;font-family:'Unbounded',sans-serif;font-size:clamp(44px,5.2vw,84px);font-weight:600;line-height:1;letter-spacing:-.06em"><x-import component-from-global-scope="st-type" text="{{ rec.word }}" caret="#16130e" hint-size="auto,1em"></x-import></div>
+        <p style="font-family:'JetBrains Mono',monospace;font-size:13px">{{ rec.alt }}</p>
+      </div>
+      <div style="display:grid;gap:14px;padding:20px 22px;border-bottom:2px solid #16130e">
+        <small style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52">{{ t.guessesH }}</small>
+        <sc-for list="{{ rec.guesses }}" as="g" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:12px;align-items:end">
+            <div style="display:grid;gap:6px"><span style="font-size:15px;font-weight:600">{{ g.word }}</span><div style="height:6px;background:#e9e2d4"><div style="height:100%;width:{{ g.pct }};background:{{ g.color }};transition:width .9s cubic-bezier(.2,.7,.1,1)"></div></div></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right">{{ g.pct }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:grid;gap:0;padding:20px 22px">
+        <button style="display:flex;justify-content:space-between;align-items:center;min-height:54px;padding:0 18px;border:2px solid #16130e;background:#16130e;color:#f1ece2;font-weight:650;font-size:15px" style-hover="background:#ff5a1f;color:#16130e;border-color:#ff5a1f"><span>{{ t.speak }}</span><x-import component-from-global-scope="st-icon" icon="volume-2" size="19" hint-size="19px,19px"></x-import></button>
+        <button onClick="{{ goChats }}" style="display:flex;justify-content:space-between;align-items:center;min-height:54px;padding:0 18px;border:2px solid #16130e;border-top:0;background:transparent;font-weight:650;font-size:15px" style-hover="background:#e9e2d4"><span>{{ t.toChat }}</span><x-import component-from-global-scope="st-icon" icon="message-circle" size="19" hint-size="19px,19px"></x-import></button>
+        <button style="display:flex;justify-content:space-between;align-items:center;min-height:54px;padding:0 18px;border:2px solid #16130e;border-top:0;background:transparent;font-weight:650;font-size:15px" style-hover="background:#e9e2d4"><span>{{ t.retry }}</span><x-import component-from-global-scope="st-icon" icon="rotate-ccw" size="19" hint-size="19px,19px"></x-import></button>
+        <p style="margin-top:14px;font-size:12px;line-height:1.5;color:#675f52">{{ t.recNote }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.dict }}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;gap:28px">
+  <p data-enter="" style="max-width:760px;font-size:16px;line-height:1.6;color:#675f52">{{ t.dictIntro }}</p>
+  <ul style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));border-top:2px solid #16130e;border-left:2px solid #16130e">
+    <sc-for list="{{ dict }}" as="d" hint-placeholder-count="10">
+      <li data-enter="" data-hover="" style="display:grid;grid-template-rows:auto 1fr auto auto;gap:6px;min-height:240px;padding:16px 18px 18px;border-right:2px solid #16130e;border-bottom:2px solid #16130e;background:#fbf8f2;color:#16130e;cursor:pointer;transition:background .25s,color .25s" style-hover="background:#16130e;color:#f1ece2">
+        <span style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em"><span style="color:#ff5a1f">{{ d.n }}</span><span style="opacity:.6">{{ d.id }}</span></span>
+        <x-import component-from-global-scope="st-hand" mode="mark" replay="hover" style="width:76px;height:76px;align-self:center" hint-size="76px,76px"></x-import>
+        <b style="font-family:'Unbounded',sans-serif;font-size:22px;font-weight:600;letter-spacing:-.04em;line-height:1.1">{{ d.word }}</b>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:12px;opacity:.65">{{ d.alt }}</small>
+      </li>
+    </sc-for>
+  </ul>
+  <h2 data-enter="" style="font-family:'Unbounded',sans-serif;font-size:clamp(22px,2.4vw,30px);font-weight:600;letter-spacing:-.045em">{{ t.examplesH }}</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));border-top:2px solid #16130e;border-left:2px solid #16130e">
+    <sc-for list="{{ examples }}" as="e" hint-placeholder-count="3">
+      <article data-enter="" style="display:grid;grid-template-rows:auto 1fr;border-right:2px solid #16130e;border-bottom:2px solid #16130e;background:#fbf8f2">
+        <div style="aspect-ratio:4/3;overflow:hidden;background:#12100d;border-bottom:2px solid #16130e"><img src="{{ e.src }}" alt="{{ e.word }}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;filter:grayscale(1) contrast(1.1)"></div>
+        <div style="display:grid;align-content:start;gap:10px;padding:18px">
+          <h3 style="font-family:'Unbounded',sans-serif;font-size:24px;font-weight:600;letter-spacing:-.04em">{{ e.word }}</h3>
+          <p style="font-size:14px;line-height:1.5;color:#675f52">{{ t.exText }}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;font-weight:600"><a href="{{ e.src }}" target="_blank" rel="noreferrer">{{ t.openEx }}</a><a href="#" onClick="{{ e.go }}">{{ t.tryRec }}</a></div>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+  <p data-enter="" style="max-width:760px;font-size:14px;line-height:1.6;color:#675f52">{{ t.dictFoot }}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.profile }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+  <section data-enter="" style="position:relative;overflow:hidden;flex:1 1 440px;max-width:580px;display:grid;gap:22px;padding:26px;background:#16130e;color:#f1ece2;transition:transform .6s cubic-bezier(.2,.7,.1,1)" style-hover="transform:perspective(1400px) rotateY(-4deg) rotateX(2deg)">
+    <div style="position:absolute;left:0;right:0;top:0;height:5px;background:repeating-linear-gradient(90deg,#ff5a1f 0 12px,transparent 12px 20px)"></div>
+    <div data-loop="scan" style="position:absolute;left:0;right:0;top:0;height:2px;background:#ff5a1f;box-shadow:0 0 18px 4px rgba(255,90,31,.45);opacity:.75;pointer-events:none"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(241,236,226,.6)"><span>SignTalk / {{ t.pass }}</span><x-import component-from-global-scope="st-hand" mode="mark" style="width:40px;height:40px;color:#f1ece2" hint-size="40px,40px"></x-import></div>
+    <div style="display:flex;align-items:center;gap:18px">
+      <span style="flex-shrink:0;width:84px;height:84px;display:grid;place-items:center;background:#f1ece2;color:#16130e;font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;letter-spacing:-.04em">ДА</span>
+      <div style="display:grid;gap:6px;min-width:0">
+        <b style="display:flex;align-items:center;gap:8px;font-family:'Unbounded',sans-serif;font-size:28px;font-weight:600;letter-spacing:-.045em;line-height:1.05">Данияр Ахметов<x-import component-from-global-scope="st-icon" icon="pencil" size="16" style="color:rgba(241,236,226,.55)" hint-size="16px,16px"></x-import></b>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(241,236,226,.65)">@daniyar</span>
+      </div>
+    </div>
+    <div style="border-top:2px dashed rgba(241,236,226,.3)"></div>
+    <div style="display:grid;gap:12px">
+      <small style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(241,236,226,.6)">{{ t.uniqueId }}</small>
+      <div style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));border:1.5px solid rgba(241,236,226,.35)">
+        <sc-for list="{{ idChars }}" as="ch" hint-placeholder-count="9">
+          <span data-enter="char" style="display:grid;place-items:center;aspect-ratio:3/4;border-right:{{ ch.br }};font-family:'JetBrains Mono',monospace;font-size:clamp(22px,3vw,38px);font-weight:500;color:{{ ch.c }}">{{ ch.v }}</span>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">
+        <sc-for list="{{ dots21 }}" as="dt" hint-placeholder-count="21">
+          <span data-enter="char" style="width:{{ dt.s }};height:{{ dt.s }};border-radius:50%;background:{{ dt.c }}"></span>
+        </sc-for>
+      </div>
+      <p style="font-size:14px;line-height:1.55;color:rgba(241,236,226,.75)">{{ t.idText }}</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap">
+      <button style="flex:1 1 180px;display:flex;justify-content:space-between;align-items:center;min-height:52px;padding:0 16px;border:2px solid #ff5a1f;background:#ff5a1f;color:#16130e;font-weight:650" style-hover="background:#f1ece2;border-color:#f1ece2"><span>{{ t.share }}</span><x-import component-from-global-scope="st-icon" icon="share-2" size="18" hint-size="18px,18px"></x-import></button>
+      <button onClick="{{ copyId }}" style="flex:1 1 180px;display:flex;justify-content:space-between;align-items:center;min-height:52px;padding:0 16px;border:2px solid rgba(241,236,226,.4);background:transparent;color:#f1ece2;font-weight:650" style-hover="border-color:#f1ece2"><span>{{ copyLabel }}</span><x-import component-from-global-scope="st-icon" icon="{{ copyIcon }}" size="18" hint-size="18px,18px"></x-import></button>
+    </div>
+  </section>
+  <section style="flex:1.2 1 420px;display:grid;gap:18px">
+    <h2 data-enter="" style="font-family:'Unbounded',sans-serif;font-size:30px;font-weight:600;letter-spacing:-.045em">{{ t.devices }}</h2>
+    <p data-enter="" style="max-width:620px;font-size:15px;line-height:1.6;color:#675f52">{{ t.devText }}</p>
+    <ul style="border-top:2px solid #16130e">
+      <sc-for list="{{ devices }}" as="v" hint-placeholder-count="3">
+        <li data-enter="" style="display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1.5px solid #c4b9a4">
+          <span style="flex-shrink:0;width:48px;height:48px;display:grid;place-items:center;border:2px solid #16130e;background:{{ v.bg }};color:{{ v.fg }}"><x-import component-from-global-scope="st-icon" icon="{{ v.icon }}" size="22" hint-size="22px,22px"></x-import></span>
+          <div style="flex:1;min-width:0;display:grid;gap:4px">
+            <b style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:15px;font-weight:650">{{ v.name }}<sc-if value="{{ v.current }}" hint-placeholder-val="{{ false }}"><span style="padding:3px 8px;background:#ff5a1f;color:#16130e;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase">{{ t.thisDevice }}</span></sc-if></b>
+            <small style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#675f52"><span style="color:{{ v.stColor }}">{{ v.status }}</span> · {{ v.since }}</small>
+          </div>
+          <sc-if value="{{ v.removable }}" hint-placeholder-val="{{ false }}"><button aria-label="Выйти на устройстве" style="width:44px;height:44px;display:grid;place-items:center;border:1.5px solid transparent;background:transparent;color:#675f52" style-hover="border-color:#b42318;color:#b42318"><x-import component-from-global-scope="st-icon" icon="trash-2" size="17" hint-size="17px,17px"></x-import></button></sc-if>
+        </li>
+      </sc-for>
+    </ul>
+    <button data-enter="" onClick="{{ goAuth }}" style="justify-self:start;display:flex;align-items:center;gap:24px;min-height:48px;padding:0 16px;border:2px solid #b42318;background:transparent;color:#b42318;font-weight:650" style-hover="background:#b42318;color:#fff"><span>{{ t.logout }}</span><x-import component-from-global-scope="st-icon" icon="log-out" size="17" hint-size="17px,17px"></x-import></button>
+  </section>
+</div>
+</sc-if>
+
+<sc-if value="{{ is.mobile }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+  <div data-enter="" style="display:grid;gap:10px">
+    <small style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52">390 × 800 · {{ t.nChats }}</small>
+    <div style="position:relative;overflow:hidden;width:390px;height:800px;display:flex;flex-direction:column;border:2px solid #16130e;background:#f1ece2">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:2px solid #16130e">
+        <span style="display:flex;align-items:center;gap:8px;font-family:'Unbounded',sans-serif;font-weight:600;font-size:17px;letter-spacing:-.04em"><x-import component-from-global-scope="st-hand" mode="mark" style="width:28px;height:28px" hint-size="28px,28px"></x-import>SignTalk<span style="color:#ff5a1f">.</span></span>
+        <span style="width:34px;height:34px;display:grid;place-items:center;background:#ff5a1f;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600">ДА</span>
+      </div>
+      <div style="padding:18px 18px 14px;display:grid;gap:10px">
+        <p style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52">01 / 04<span style="width:36px;height:2px;background:#ff5a1f"></span>{{ t.kicker }}</p>
+        <h1 style="font-family:'Unbounded',sans-serif;font-size:32px;font-weight:600;letter-spacing:-.05em;line-height:1">{{ t.nChats }}</h1>
+      </div>
+      <div style="position:relative;margin:0 14px 12px;padding:16px;display:flex;justify-content:space-between;align-items:flex-end;background:#16130e;color:#f1ece2">
+        <div style="position:absolute;left:0;right:0;top:0;height:4px;background:repeating-linear-gradient(90deg,#ff5a1f 0 10px,transparent 10px 16px)"></div>
+        <div style="display:grid;gap:6px"><small style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(241,236,226,.6)">{{ t.myId }}</small><b style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500">ST-4FD9QA</b></div>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(241,236,226,.7)"><span style="width:7px;height:7px;border-radius:50%;background:#2fbf71"></span>{{ t.online }}</span>
+      </div>
+      <ul style="flex:1;border-top:2px solid #16130e;background:#fbf8f2">
+        <sc-for list="{{ contactsMobile }}" as="c" hint-placeholder-count="5">
+          <li style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #ddd4c3;background:{{ c.bg }}">
+            <span style="position:relative;flex-shrink:0;width:44px;height:44px;display:grid;place-items:center;background:{{ c.avBg }};color:{{ c.avFg }};font-family:'Unbounded',sans-serif;font-size:14px;font-weight:600">{{ c.ini }}</span>
+            <span style="flex:1;min-width:0;display:grid;gap:3px">
+              <span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</b><time style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#675f52">{{ c.time }}</time></span>
+              <span style="font-size:13px;color:{{ c.pvColor }};font-weight:{{ c.pvWeight }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.pv }}</span>
+            </span>
+          </li>
+        </sc-for>
+      </ul>
+      <nav style="position:absolute;left:14px;right:14px;bottom:18px;display:grid;grid-template-columns:repeat(4,1fr);background:#16130e;color:#f1ece2;box-shadow:0 18px 40px -14px rgba(22,19,14,.6)">
+        <sc-for list="{{ mnavChats }}" as="n" hint-placeholder-count="4">
+          <span style="position:relative;display:grid;justify-items:center;gap:4px;padding:11px 4px 10px;color:{{ n.c }};font-size:11px;font-weight:600"><span style="position:absolute;left:0;right:0;top:0;height:3px;background:{{ n.bar }}"></span><x-import component-from-global-scope="st-icon" icon="{{ n.icon }}" size="20" hint-size="20px,20px"></x-import>{{ n.label }}</span>
+        </sc-for>
+      </nav>
+    </div>
+  </div>
+
+  <div data-enter="" style="display:grid;gap:10px">
+    <small style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#675f52">390 × 800 · {{ t.nRec }}</small>
+    <div style="position:relative;overflow:hidden;width:390px;height:800px;display:flex;flex-direction:column;border:2px solid #16130e;background:#f1ece2">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:2px solid #16130e">
+        <span style="display:flex;align-items:center;gap:8px;font-family:'Unbounded',sans-serif;font-weight:600;font-size:17px;letter-spacing:-.04em"><x-import component-from-global-scope="st-hand" mode="mark" style="width:28px;height:28px" hint-size="28px,28px"></x-import>SignTalk<span style="color:#ff5a1f">.</span></span>
+        <span style="width:34px;height:34px;display:grid;place-items:center;background:#ff5a1f;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:600">ДА</span>
+      </div>
+      <div style="position:relative;overflow:hidden;isolation:isolate;height:330px;background:#12100d;color:#f2ede4">
+        <x-import component-from-global-scope="st-dots" ink="242,237,228" alpha="0.07" style="position:absolute;inset:0;z-index:-2" hint-size="100%,100%"></x-import>
+        <x-import component-from-global-scope="st-hand" mode="track" pose="{{ rec.pose }}" labels="{{ labels }}" style="position:absolute;left:14%;top:10%;width:72%;height:62%;z-index:-1;color:#f2ede4" hint-size="280px,200px"></x-import>
+        <span style="position:absolute;left:14px;top:14px;display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase"><span data-loop="blink" data-delay="0" style="width:7px;height:7px;border-radius:50%;background:#ff5a1f"></span>{{ t.recLabel }}</span>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:64px;padding:8px 14px;background:rgba(18,16,13,.75);border-top:1px solid rgba(242,237,228,.18)"><x-import component-from-global-scope="st-wave" style="width:100%;height:100%" hint-size="100%,48px"></x-import></div>
+      </div>
+      <div style="display:grid;gap:6px;padding:18px;background:#ff5a1f;color:#16130e;border-top:2px solid #16130e;border-bottom:2px solid #16130e">
+        <small style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase">{{ t.result }} · {{ rec.n }} / 10</small>
+        <div style="min-height:1.1em;font-family:'Unbounded',sans-serif;font-size:46px;font-weight:600;letter-spacing:-.06em;line-height:1"><x-import component-from-global-scope="st-type" text="{{ rec.word }}" caret="#16130e" hint-size="auto,1em"></x-import></div>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:12px">{{ rec.alt }}</small>
+      </div>
+      <div style="display:grid;gap:12px;padding:16px 18px">
+        <sc-for list="{{ rec.guesses }}" as="g" hint-placeholder-count="3">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:end">
+            <div style="display:grid;gap:5px"><span style="font-size:14px;font-weight:600">{{ g.word }}</span><div style="height:5px;background:#e9e2d4"><div style="height:100%;width:{{ g.pct }};background:{{ g.color }};transition:width .9s cubic-bezier(.2,.7,.1,1)"></div></div></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;text-align:right">{{ g.pct }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <nav style="position:absolute;left:14px;right:14px;bottom:18px;display:grid;grid-template-columns:repeat(4,1fr);background:#16130e;color:#f1ece2;box-shadow:0 18px 40px -14px rgba(22,19,14,.6)">
+        <sc-for list="{{ mnavRec }}" as="n" hint-placeholder-count="4">
+          <span style="position:relative;display:grid;justify-items:center;gap:4px;padding:11px 4px 10px;color:{{ n.c }};font-size:11px;font-weight:600"><span style="position:absolute;left:0;right:0;top:0;height:3px;background:{{ n.bar }}"></span><x-import component-from-global-scope="st-icon" icon="{{ n.icon }}" size="20" hint-size="20px,20px"></x-import>{{ n.label }}</span>
+        </sc-for>
+      </nav>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+</main>
+
+<footer style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 32px;border-top:2px solid #16130e;font-family:'JetBrains Mono',monospace;font-size:12px;color:#675f52">
+  <span style="display:flex;align-items:center;gap:10px"><x-import component-from-global-scope="st-hand" mode="mark" still="true" style="width:22px;height:22px;color:#16130e" hint-size="22px,22px"></x-import>SignTalk · {{ t.version }} 0.7</span>
+  <a href="#">{{ t.about }}</a>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auth&quot;,&quot;chats&quot;,&quot;call&quot;,&quot;rec&quot;,&quot;dict&quot;,&quot;profile&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;auth&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;on&quot;,&quot;off&quot;],&quot;default&quot;:&quot;on&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;landmarkLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Демо&quot;}}">
+const T = {
+  ru: {
+    mock: 'Макет · экраны', kicker: 'Жесты → понятный текст', langName: 'Русский',
+    s_auth: 'Вход', s_chats: 'Чаты', s_call: 'Звонок', s_rec: 'Распознавание', s_dict: 'Словарь', s_profile: 'Профиль', s_mobile: 'Телефон',
+    nChats: 'Чаты', nRec: 'Распознавание', nDict: 'Словарь', nHelp: 'Помощь', login: 'Войти',
+    h_auth: 'Вход в SignTalk', h_chats: 'Чаты и видеозвонки', h_call: 'Видеозвонок с переводом жестов', h_rec: 'Распознавание жестов', h_dict: 'Словарь и примеры', h_profile: 'Профиль и устройства', h_mobile: 'На телефоне',
+    badge: 'SignTalk · 21 точка руки', h2a: 'Общение без барьеров: текст, видео и ', h2b: 'жесты',
+    f1: 'Переписка в реальном времени. Найдите собеседника по уникальному ID.', f2: 'Видеозвонок с переводом жестов в текст прямо во время разговора.', f3: 'Один аккаунт на телефоне, ноутбуке и планшете одновременно.',
+    rGesture: 'Жест', rText: 'текст', rPoints: 'Точек', rConf: 'Уверенность',
+    tabLogin: 'Вход', tabReg: 'Регистрация', fLogin: 'Имя пользователя или ID', fName: 'Ваше имя (видно собеседникам)', fUser: 'Имя пользователя для входа', fUserHint: '3–24 символа: латиница, цифры, «_» и «.»', fPass: 'Пароль', fPassHint: 'Минимум 8 символов',
+    submitLogin: 'Войти', submitReg: 'Создать аккаунт', noAcc: 'Нет аккаунта? ', hasAcc: 'Уже есть аккаунт? ', regLink: 'Зарегистрируйтесь', loginLink: 'Войдите',
+    idNote: 'После регистрации вы получите уникальный ID — поделитесь им, чтобы вас нашли.',
+    myId: 'Ваш ID — поделитесь им', online: 'онлайн', findPh: 'Найти по ID: ST-XXXXXX', findBtn: 'Найти', contacts: 'Контакты', inNet: 'в сети', offNet: 'не в сети',
+    videoCall: 'Видеозвонок', signLabel: 'Перевод жеста', speechLabel: 'Речь → текст', msgPh: 'Сообщение…', signing: 'показывает жест…', signPrefix: 'Жест: ',
+    yesterday: 'Вчера', today: 'Сегодня', callLog: 'Видеозвонок · 4:12',
+    peerSigning: 'Собеседник показывает жест…', handsOn: 'руки видны', reading: 'читаю жест…', panelTitle: 'Перевод и чат', signToText: 'Жесты → текст',
+    translateMine: 'Переводить мои жесты', autoSend: 'Сразу отправлять уверенный результат', model: 'Модель', textLang: 'Язык текста', sent: 'отправлено',
+    speechH: 'Речь и озвучивание', speechSub: 'Субтитры моей речи для собеседника', tts: 'Озвучивать жесты и сообщения собеседника', transcriptH: 'Сообщения в звонке', write: 'Написать…',
+    privacy: 'Распознавание экспериментальное и работает только на вашем устройстве; видео не отправляется на сервер.', hangup: 'Завершить',
+    noteTitle: 'Жест → текст → озвучивание', noteText: 'Покажите один жест, проверьте результат и озвучьте его. Начните со словаря KRSL: примеры и названия общие для облачного и локального режимов. Распознавание может ошибаться.', noteLink: 'Какие жесты можно показать',
+    engineCloud: 'Облачный ИИ', engineLocal: 'На устройстве', signLang: 'Жестовый язык / модель', krslOpt: 'Казахстан · KRSL', outLang: 'Язык текста и озвучивания',
+    recLabel: 'Камера', motion: 'Движение рук', threshold: 'порог', result: 'Результат', guessesH: 'Варианты', speak: 'Озвучить', toChat: 'Отправить в чат', retry: 'Повторить', recNote: 'Распознавание может ошибаться — проверьте результат перед отправкой.',
+    p1: 'Камера', p2: '21 точка', p3: 'Модель KRSL', p4: 'Текст', p5: 'Голос',
+    dictIntro: 'Общий словарь KRSL: 10 жестов с одинаковыми названиями для локальной модели и облачного режима «KRSL · 10 жестов». Русский и казахский — языки подписи, жестовый язык остаётся KRSL.',
+    examplesH: 'Три видео движения от авторов KRSL20', exText: 'Посмотрите движение в оригинальном примере KRSL20.', openEx: 'Открыть пример ↗', tryRec: 'Попробовать распознать →',
+    dictFoot: 'Эти три видео — примеры для человека. Они не передаются ИИ как обучение. Контрольная запись проверяет локальную модель по сохранённым координатам; она не проверяет облако или вашу камеру.',
+    pass: 'Пропуск', uniqueId: 'Ваш уникальный ID', idText: 'Сообщите этот ID собеседнику — он найдёт вас через поиск в разделе «Чаты».', share: 'Поделиться ID', copy: 'Скопировать', copied: 'Скопировано',
+    devices: 'Устройства', devText: 'Аккаунт работает на нескольких устройствах одновременно: сообщения приходят везде, звонок звонит на всех, а отвечаете вы на одном.',
+    thisDevice: 'это устройство', was: 'был(а) ', signedIn: 'вход ', logout: 'Выйти на этом устройстве', version: 'Версия', about: 'О приложении и конфиденциальности',
+    phrases: ['Здравствуйте!', 'Спасибо', 'Да', 'Нет', 'Повторите, пожалуйста', 'Можно позвонить по видео?'],
+  },
+  kk: {
+    mock: 'Макет · экрандар', kicker: 'Ым → түсінікті мәтін', langName: 'Қазақша',
+    s_auth: 'Кіру', s_chats: 'Чаттар', s_call: 'Қоңырау', s_rec: 'Тану', s_dict: 'Сөздік', s_profile: 'Профиль', s_mobile: 'Телефон',
+    nChats: 'Чаттар', nRec: 'Тану', nDict: 'Сөздік', nHelp: 'Көмек', login: 'Кіру',
+    h_auth: 'SignTalk-қа кіру', h_chats: 'Чаттар және бейнеқоңыраулар', h_call: 'Ым аудармасы бар бейнеқоңырау', h_rec: 'Ымды тану', h_dict: 'Сөздік және мысалдар', h_profile: 'Профиль және құрылғылар', h_mobile: 'Телефонда',
+    badge: 'SignTalk · 21 қол нүктесі', h2a: 'Кедергісіз қарым-қатынас: мәтін, бейне және ', h2b: 'ым',
+    f1: 'Нақты уақыттағы хат алмасу. Әңгімелесушіні бірегей ID бойынша табыңыз.', f2: 'Сөйлесу кезінде ымды мәтінге аударатын бейнеқоңырау.', f3: 'Бір аккаунт телефонда, ноутбукта және планшетте бір уақытта.',
+    rGesture: 'Ым', rText: 'мәтін', rPoints: 'Нүкте', rConf: 'Сенімділік',
+    tabLogin: 'Кіру', tabReg: 'Тіркелу', fLogin: 'Пайдаланушы аты немесе ID', fName: 'Атыңыз (әңгімелесушілерге көрінеді)', fUser: 'Кіруге арналған пайдаланушы аты', fUserHint: '3–24 таңба: латын әріптері, сандар, «_» және «.»', fPass: 'Құпиясөз', fPassHint: 'Кемінде 8 таңба',
+    submitLogin: 'Кіру', submitReg: 'Аккаунт ашу', noAcc: 'Аккаунт жоқ па? ', hasAcc: 'Аккаунт бар ма? ', regLink: 'Тіркеліңіз', loginLink: 'Кіріңіз',
+    idNote: 'Тіркелгеннен кейін бірегей ID аласыз — сізді табу үшін оны бөлісіңіз.',
+    myId: 'Сіздің ID — оны бөлісіңіз', online: 'онлайн', findPh: 'ID бойынша табу: ST-XXXXXX', findBtn: 'Табу', contacts: 'Контактілер', inNet: 'желіде', offNet: 'желіде емес',
+    videoCall: 'Бейнеқоңырау', signLabel: 'Ым аудармасы', speechLabel: 'Сөйлеу → мәтін', msgPh: 'Хабарлама…', signing: 'ым көрсетіп жатыр…', signPrefix: 'Ым: ',
+    yesterday: 'Кеше', today: 'Бүгін', callLog: 'Бейнеқоңырау · 4:12',
+    peerSigning: 'Әңгімелесуші ым көрсетіп жатыр…', handsOn: 'қол көрінеді', reading: 'ымды оқудамын…', panelTitle: 'Аударма және чат', signToText: 'Ым → мәтін',
+    translateMine: 'Ымдарымды аудару', autoSend: 'Сенімді нәтижені бірден жіберу', model: 'Модель', textLang: 'Мәтін тілі', sent: 'жіберілді',
+    speechH: 'Сөйлеу және дыбыстау', speechSub: 'Сөйлеуімді әңгімелесушіге субтитр ету', tts: 'Әңгімелесушінің ымдары мен хабарламаларын дыбыстау', transcriptH: 'Қоңыраудағы хабарламалар', write: 'Жазу…',
+    privacy: 'Тану тәжірибелік және тек құрылғыңызда жұмыс істейді; бейне серверге жіберілмейді.', hangup: 'Аяқтау',
+    noteTitle: 'Ым → мәтін → дыбыстау', noteText: 'Бір ым көрсетіңіз, нәтижені тексеріп, дыбыстаңыз. KRSL сөздігінен бастаңыз: бұлттық және жергілікті режимдердің мысалдары мен атаулары ортақ. Тану қате болуы мүмкін.', noteLink: 'Қандай ым көрсетуге болады',
+    engineCloud: 'Бұлттық ЖИ', engineLocal: 'Құрылғыда', signLang: 'Ым тілі / модель', krslOpt: 'Қазақстан · KRSL', outLang: 'Мәтін және дыбыстау тілі',
+    recLabel: 'Камера', motion: 'Қол қимылы', threshold: 'шек', result: 'Нәтиже', guessesH: 'Нұсқалар', speak: 'Дыбыстау', toChat: 'Чатқа жіберу', retry: 'Қайталау', recNote: 'Тану қате болуы мүмкін — жібермес бұрын нәтижені тексеріңіз.',
+    p1: 'Камера', p2: '21 нүкте', p3: 'KRSL моделі', p4: 'Мәтін', p5: 'Дауыс',
+    dictIntro: 'Ортақ KRSL сөздігі: жергілікті модель мен «KRSL · 10 ым» бұлт режиміне бірдей атаулары бар 10 ым. Орыс және қазақ — жазу тілдері, ым тілі KRSL болып қалады.',
+    examplesH: 'KRSL20 авторларының үш қимыл бейнесі', exText: 'KRSL20 бастапқы мысалындағы қимылды қараңыз.', openEx: 'Мысалды ашу ↗', tryRec: 'Танып көру →',
+    dictFoot: 'Бұл үш бейне — адамға арналған мысалдар. Олар ЖИ-ге оқыту ретінде жіберілмейді. Бақылау жазбасы жергілікті модельді сақталған координаттармен тексереді; бұлтты не камераңызды тексермейді.',
+    pass: 'Рұқсатнама', uniqueId: 'Сіздің бірегей ID', idText: 'Бұл ID-ді әңгімелесушіге айтыңыз — ол сізді «Чаттар» бөліміндегі іздеу арқылы табады.', share: 'ID бөлісу', copy: 'Көшіру', copied: 'Көшірілді',
+    devices: 'Құрылғылар', devText: 'Аккаунт бірнеше құрылғыда бір уақытта жұмыс істейді: хабарламалар барлығына келеді, қоңырау барлығында шырылдайды, ал жауапты біреуінде бересіз.',
+    thisDevice: 'осы құрылғы', was: 'соңғы рет ', signedIn: 'кірген ', logout: 'Осы құрылғыдан шығу', version: 'Нұсқа', about: 'Қолданба және құпиялылық',
+    phrases: ['Сәлеметсіз бе!', 'Рахмет', 'Иә', 'Жоқ', 'Қайталаңызшы', 'Бейнеқоңырау шалуға бола ма?'],
+  },
+};
+const WORDS = [
+  { id: 'gde', ru: 'Где (место)', kk: 'Қай жерде' }, { id: 'kak', ru: 'Как', kk: 'Қалай' },
+  { id: 'kakoi', ru: 'Какой', kk: 'Қандай' }, { id: 'kogda', ru: 'Когда', kk: 'Қашан' },
+  { id: 'kotoriy', ru: 'Который', kk: 'Қайсы' }, { id: 'kto', ru: 'Кто', kk: 'Кім' },
+  { id: 'kuda', ru: 'Куда (направление)', kk: 'Қайда (бағыт)' }, { id: 'skolko', ru: 'Сколько', kk: 'Қанша' },
+  { id: 'what', ru: 'Что', kk: 'Не' }, { id: 'zachem', ru: 'Зачем', kk: 'Не үшін' },
+];
+const SCREENS = ['auth', 'chats', 'call', 'rec', 'dict', 'profile', 'mobile'];
+const LIVE = [6, 3, 7, 0, 5];
+const INK = '#16130e', PAPER = '#f1ece2', SIG = '#ff5a1f';
+const short = (s) => s.replace(/\s*\(.*?\)/, '');
+const pad = (n) => String(n).padStart(2, '0');
+
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  threadRef = React.createRef();
+  state = { screen: null, lang: 'ru', step: 0, sec: 252, mode: 'login', showPass: false, draft: '', sent: [], copied: false, large: false, contrast: false, tg: { translate: true, auto: true, speech: false, tts: false }, engine: 'local' };
+
+  componentDidMount() {
+    this.iv = setInterval(() => this.setState((s) => ({ step: s.step + 1 })), 2600);
+    this.iv2 = setInterval(() => { if (this.screen() === 'call') this.setState((s) => ({ sec: s.sec + 1 })); }, 1000);
+    this._lastStart = this.props.startScreen;
+    this._lastKey = this.screen() + '|' + this.state.lang;
+    this.applyMotion();
+    this.enter(true);
+    this.scrollThread();
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearInterval(this.iv2); }
+  componentDidUpdate() {
+    const start = this.props.startScreen;
+    if (start !== this._lastStart) { this._lastStart = start; if (this.state.screen) { this.setState({ screen: null }); return; } }
+    const key = this.screen() + '|' + this.state.lang;
+    const changed = key !== this._lastKey;
+    this._lastKey = key;
+    this.applyMotion();
+    this.enter(changed);
+    this.scrollThread();
+  }
+  scrollThread() { const th = this.threadRef.current; if (th) th.scrollTop = th.scrollHeight; }
+  screen() { return this.state.screen || this.props.startScreen || 'auth'; }
+  motionOff() { return this.props.motion === 'off'; }
+  applyMotion() { document.documentElement.dataset.motion = this.motionOff() ? 'off' : 'on'; }
+
+  enter(all) {
+    const root = this.rootRef.current;
+    if (!root || this.motionOff()) return;
+    const ease = 'cubic-bezier(.2,.7,.1,1)';
+    const els = root.querySelectorAll(all ? '[data-enter]' : '[data-enter]:not([data-shown])');
+    let i = 0;
+    els.forEach((el) => {
+      el.dataset.shown = '1';
+      const kind = el.dataset.enter;
+      const d = Math.min(i++, 18) * 40;
+      if (kind === 'rule') {
+        el.style.transformOrigin = 'left';
+        el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 800, delay: 200 + d, easing: ease, fill: 'backwards' });
+      } else if (kind === 'pop') {
+        el.animate([{ opacity: 0, transform: 'translateY(18px) scale(.96)', filter: 'brightness(1.4)' }, { opacity: 1, transform: 'none', filter: 'none' }], { duration: 650, delay: all ? d : 0, easing: ease, fill: 'backwards' });
+      } else if (kind === 'char') {
+        el.animate([{ opacity: 0, transform: 'translateY(40%)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 250 + (i % 30) * 35, easing: ease, fill: 'backwards' });
+      } else {
+        el.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 640, delay: d, easing: ease, fill: 'backwards' });
+      }
+    });
+    root.querySelectorAll('[data-loop]:not([data-looping])').forEach((el) => {
+      el.dataset.looping = '1';
+      const k = el.dataset.loop, delay = +(el.dataset.delay || 0);
+      if (k === 'blink') el.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 1100, delay, iterations: Infinity });
+      if (k === 'pulse') el.animate([{ boxShadow: '0 0 0 0 rgba(255,90,31,.55)' }, { boxShadow: '0 0 0 8px rgba(255,90,31,0)' }], { duration: 1600, iterations: Infinity });
+      if (k === 'scan') el.animate([{ top: '0%' }, { top: '100%' }], { duration: 3600, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' });
+    });
+  }
+
+  send(text) {
+    const body = (text || '').trim();
+    if (!body) return;
+    const now = new Date();
+    this.setState((s) => ({ draft: '', sent: [...s.sent, { text: body, time: pad(now.getHours()) + ':' + pad(now.getMinutes()) }] }));
+  }
+
+  renderVals() {
+    const L = this.state.lang, t = T[L], step = this.state.step, s = this.screen();
+    const other = L === 'ru' ? 'kk' : 'ru';
+    const go = (x) => () => this.setState({ screen: x });
+    const wi = step % 10;
+    const conf = 0.71 + ((step * 37) % 24) / 100;
+    const pct = (v) => Math.round(v * 100) + '%';
+    const word = (i, q) => short(WORDS[i][L]) + (q ? '?' : '');
+
+    const screens = SCREENS.map((id, i) => ({ id, n: pad(i + 1), label: t['s_' + id], go: go(id), bg: s === id ? SIG : 'transparent', fg: s === id ? INK : '#f2ede4', nc: s === id ? INK : SIG }));
+    const navDef = [['chats', 'message-circle', t.nChats, 2], ['rec', 'camera', t.nRec, 0], ['dict', 'book-open', t.nDict, 0], ['help', 'circle-help', t.nHelp, 0]];
+    const nav = navDef.map(([id, icon, label, badge], i) => {
+      const on = id === s || (id === 'chats' && s === 'call');
+      return { idx: pad(i + 1), icon, label, badge, go: id === 'help' ? () => {} : go(id), bg: on ? INK : 'transparent', fg: on ? PAPER : INK, ic: on ? SIG : '#675f52' };
+    });
+
+    // live chat stream
+    const phase = step % 2;
+    const arrived = Math.min(Math.floor((step + 1) / 2), 8);
+    const signingNow = phase === 0 && arrived < 8;
+    const bub = (m, idx) => {
+      const mine = m.from === 'me', sign = m.kind === 'sign', speech = m.kind === 'speech';
+      return {
+        isBubble: true, mine, isSign: sign, isSpeech: speech, text: m.text, time: m.time, tick: m.read ? 'check-check' : 'check',
+        enter: m.live ? 'pop' : '', justify: mine ? 'flex-end' : 'flex-start',
+        pad: sign ? '12px 16px 8px' : '10px 14px 7px',
+        bg: sign ? (mine ? SIG : '#fbd9c6') : mine ? INK : '#ffffff',
+        fg: sign ? INK : mine ? PAPER : INK,
+        bd: sign ? SIG : mine ? INK : '#ddd4c3',
+        font: sign ? "'Unbounded',sans-serif" : 'inherit', size: sign ? '22px' : '15.5px', weight: sign ? 500 : 400, ls: sign ? '-.03em' : '0', lh: sign ? 1.15 : 1.45,
+      };
+    };
+    const base = [
+      { isDay: true, label: t.yesterday },
+      bub({ from: 'me', kind: 'text', text: L === 'ru' ? 'Привет! Завтра консультация перед экзаменом.' : 'Сәлем! Ертең емтихан алдында консультация бар.', time: '18:40', read: true }),
+      bub({ from: 'a', kind: 'sign', text: word(3, true), time: '18:41' }),
+      bub({ from: 'me', kind: 'text', text: L === 'ru' ? 'В 10:00, кабинет 214.' : 'Сағат 10:00-де, 214 кабинет.', time: '18:41', read: true }),
+      bub({ from: 'a', kind: 'text', text: L === 'ru' ? 'Спасибо, буду' : 'Рахмет, барамын', time: '18:42' }),
+      { isCall: true, label: t.callLog, time: '18:50' },
+      { isDay: true, label: t.today },
+      bub({ from: 'me', kind: 'speech', text: L === 'ru' ? 'Я у входа в корпус, ты где?' : 'Мен корпус кіреберісіндемін, сен қайдасың?', time: '09:52', read: true }),
+    ];
+    const live = [];
+    for (let k = 0; k < arrived; k++) live.push(bub({ from: 'a', kind: 'sign', text: word(LIVE[k % LIVE.length], true), time: '09:' + (53 + k), live: true }));
+    const sent = this.state.sent.map((m) => bub({ from: 'me', kind: 'text', text: m.text, time: m.time, read: false, live: true }));
+    const msgs = [...base, ...live, ...sent];
+    if (signingNow) msgs.push({ isSigning: true, pose: String(step % 6) });
+    const lastLive = arrived ? word(LIVE[(arrived - 1) % LIVE.length], true) : word(3, true);
+
+    const C = [
+      { id: 'ST-7KQ2MX', name: 'Алия Сейткали', ini: 'АС', online: true, time: '09:5' + Math.min(9, 3 + arrived), unread: 2 },
+      { id: 'ST-3HP8WD', name: 'Марат Жумабаев', ini: 'МЖ', online: true, time: '08:15', pv: L === 'ru' ? 'Видеозвонок · 12:40' : 'Бейнеқоңырау · 12:40' },
+      { id: 'ST-9QX1LA', name: L === 'ru' ? 'Деканат колледжа' : 'Колледж деканаты', ini: 'ДК', online: false, time: '16.11', pv: L === 'ru' ? 'Расписание на неделю обновлено' : 'Апталық кесте жаңартылды' },
+      { id: 'ST-2MV7TE', name: 'Сабина Каримова', ini: 'СК', online: false, time: '12.11', pv: L === 'ru' ? 'Спасибо!' : 'Рахмет!' },
+      { id: 'ST-5RB4NC', name: 'Ерлан Тулегенов', ini: 'ЕТ', online: false, time: '10.11', pv: L === 'ru' ? 'Пропущенный звонок' : 'Өткізіп алған қоңырау', missed: true },
+    ];
+    const contacts = C.map((c, i) => {
+      const alia = i === 0;
+      return {
+        ...c, active: alia, go: go('chats'), bg: alia ? '#e9e2d4' : 'transparent',
+        avBg: c.online ? INK : '#e9e2d4', avFg: c.online ? PAPER : INK,
+        pv: alia ? (signingNow ? t.signing : t.signPrefix + lastLive) : c.pv,
+        pvColor: alia && signingNow ? '#b93a0b' : c.missed ? '#b42318' : '#675f52',
+        pvWeight: alia && signingNow ? 650 : 400,
+        unread: alia ? 0 : c.unread || 0,
+      };
+    });
+    const contactsMobile = C.slice(0, 5).map((c, i) => ({ ...c, bg: 'transparent', avBg: c.online ? INK : '#e9e2d4', avFg: c.online ? PAPER : INK, pv: i === 0 ? (signingNow ? t.signing : t.signPrefix + lastLive) : c.pv, pvColor: i === 0 && signingNow ? '#b93a0b' : c.missed ? '#b42318' : '#675f52', pvWeight: i === 0 && signingNow ? 650 : 400 }));
+
+    // recognition
+    const gi = [wi, (wi + 3) % 10, (wi + 7) % 10];
+    const gp = [conf, (1 - conf) * 0.62, (1 - conf) * 0.25];
+    const guesses = gi.map((g, k) => ({ word: word(g), pct: pct(gp[k]), color: k === 0 ? SIG : INK }));
+    const pipeActive = step % 5;
+    const pipe = [t.p1, t.p2, t.p3, t.p4, t.p5].map((label, k) => {
+      const on = k === pipeActive, done = k < pipeActive;
+      return { n: pad(k + 1), label, bg: on ? INK : 'transparent', fg: on ? PAPER : done ? INK : '#675f52', nc: SIG, bar: on || done ? SIG : 'transparent', br: k < 4 ? '2px solid #16130e' : '0' };
+    });
+
+    // call
+    const cw = LIVE[Math.floor(step / 2) % LIVE.length];
+    const myW = (step + 4) % 10;
+    const tg = this.state.tg;
+    const toggle = (key, label) => ({ label, bg: tg[key] ? SIG : 'transparent', kx: tg[key] ? '18px' : '0px', go: () => this.setState((st) => ({ tg: { ...st.tg, [key]: !st.tg[key] } })) });
+    const tr = (mine, kind, text, isLive) => {
+      const sign = kind === 'sign';
+      return { text, enter: isLive ? 'pop' : '', justify: mine ? 'flex-end' : 'flex-start', bg: sign ? (mine ? SIG : '#fbd9c6') : mine ? INK : '#fff', fg: sign ? INK : mine ? PAPER : INK, bd: sign ? SIG : mine ? INK : '#ddd4c3', font: sign ? "'Unbounded',sans-serif" : 'inherit', size: sign ? '16px' : '13.5px', weight: sign ? 600 : 400, ls: sign ? '-.03em' : '0' };
+    };
+    const transcript = [
+      tr(false, 'sign', word(3, true)),
+      tr(true, 'text', L === 'ru' ? 'В 10:00, кабинет 214.' : 'Сағат 10:00-де, 214 кабинет.'),
+      tr(true, 'sign', word(myW, true)),
+      ...(phase === 1 ? [tr(false, 'sign', word(cw, true), true)] : []),
+    ];
+
+    const sec = this.state.sec;
+    const devices = [
+      { icon: 'monitor', name: 'Chrome · Windows', current: true, removable: false, status: t.inNet, stColor: '#1d7247', since: t.signedIn + '02.09', bg: INK, fg: SIG },
+      { icon: 'smartphone', name: 'Safari · iPhone', current: false, removable: true, status: t.inNet, stColor: '#1d7247', since: t.signedIn + '14.10', bg: 'transparent', fg: INK },
+      { icon: 'smartphone', name: 'Chrome · Android', current: false, removable: true, status: t.was + '12.11', stColor: '#675f52', since: t.signedIn + '03.11', bg: 'transparent', fg: INK },
+    ];
+    const mnav = (active) => [['message-circle', t.nChats, 'chats'], ['camera', t.nRec, 'rec'], ['book-open', t.nDict, 'dict'], ['user', t.s_profile, 'profile']].map(([icon, label, id]) => ({ icon, label, c: id === active ? SIG : PAPER, bar: id === active ? SIG : 'transparent' }));
+
+    return {
+      rootRef: this.rootRef, threadRef: this.threadRef, t, screens, nav,
+      is: { auth: s === 'auth', chats: s === 'chats', call: s === 'call', rec: s === 'rec', dict: s === 'dict', profile: s === 'profile', mobile: s === 'mobile' },
+      kicker: pad(SCREENS.indexOf(s) + 1) + ' / 07',
+      title: t['h_' + s],
+      labels: this.props.landmarkLabels ?? true,
+      lng: { kkBg: L === 'kk' ? INK : 'transparent', kkFg: L === 'kk' ? PAPER : INK, ruBg: L === 'ru' ? INK : 'transparent', ruFg: L === 'ru' ? PAPER : INK },
+      setKk: () => this.setState({ lang: 'kk' }), setRu: () => this.setState({ lang: 'ru' }),
+      chip: { ini: 'ДА', label: s === 'auth' ? t.login : 'Данияр', bg: s === 'profile' ? INK : 'transparent', fg: s === 'profile' ? PAPER : INK },
+      goChats: go('chats'), goProfile: go('profile'), goCall: go('call'), goDict: go('dict'), goAuth: go('auth'),
+      large: this.state.large, contrast: this.state.contrast,
+      toggleLarge: () => this.setState((st) => ({ large: !st.large })), toggleContrast: () => this.setState((st) => ({ contrast: !st.contrast })),
+      a11y: { largeBg: this.state.large ? INK : 'transparent', largeFg: this.state.large ? PAPER : INK, conBg: this.state.contrast ? INK : 'transparent', conFg: this.state.contrast ? PAPER : INK },
+      zoom: this.state.large ? 1.12 : 1, filter: this.state.contrast ? 'contrast(1.25)' : 'none',
+      prevent: (e) => e.preventDefault(),
+      demo: { pose: String(wi % 6), word: word(wi), alt: short(WORDS[wi][other]), n: pad(wi + 1), pct: pct(conf) },
+      features: [t.f1, t.f2, t.f3].map((text, i) => ({ n: pad(i + 1), text })),
+      tabs: { isLogin: this.state.mode === 'login', isReg: this.state.mode === 'register', lBg: this.state.mode === 'login' ? INK : 'transparent', lFg: this.state.mode === 'login' ? PAPER : INK, rBg: this.state.mode === 'register' ? INK : 'transparent', rFg: this.state.mode === 'register' ? PAPER : INK },
+      setLogin: () => this.setState({ mode: 'login' }), setReg: () => this.setState({ mode: 'register' }),
+      passType: this.state.showPass ? 'text' : 'password', passIcon: this.state.showPass ? 'eye-off' : 'eye',
+      togglePass: () => this.setState((st) => ({ showPass: !st.showPass })),
+      submitLabel: this.state.mode === 'login' ? t.submitLogin : t.submitReg,
+      authSwitch: this.state.mode === 'login' ? { q: t.noAcc, link: t.regLink, go: () => this.setState({ mode: 'register' }) } : { q: t.hasAcc, link: t.loginLink, go: () => this.setState({ mode: 'login' }) },
+      copyId: () => { try { navigator.clipboard.writeText('ST-4FD9QA').catch(() => {}); } catch (e) {} this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1500); },
+      copyIcon: this.state.copied ? 'check' : 'copy', copyLabel: this.state.copied ? t.copied : t.copy,
+      contacts, contactsMobile, msgs,
+      thread: { status: signingNow ? t.signing : t.inNet, stColor: signingNow ? '#b93a0b' : '#675f52' },
+      phrases: t.phrases.map((text) => ({ text, go: () => this.send(text) })),
+      draft: this.state.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(this.state.draft); } },
+      submitDraft: (e) => { e.preventDefault(); this.send(this.state.draft); },
+      sendBg: this.state.draft.trim() ? SIG : '#e9e2d4',
+      call: {
+        pose: String(step % 6), selfPose: String((step + 3) % 6), timer: pad(Math.floor(sec / 60)) + ':' + pad(sec % 60),
+        peerSigning: phase === 0, showSub: phase === 1, sub: word(cw, true),
+        chip: phase === 1 ? t.reading : t.handsOn, chipBg: phase === 1 ? SIG : PAPER, selfWord: word(myW, true),
+        guesses: [myW, (myW + 2) % 10, (myW + 5) % 10].map((g, k) => ({ word: word(g), pct: pct(gp[k]), color: k === 0 ? SIG : 'rgba(241,236,226,.55)' })),
+        trBg: tg.translate ? SIG : 'transparent', trFg: tg.translate ? INK : '#f2ede4', spBg: tg.speech ? SIG : 'transparent', spFg: tg.speech ? INK : '#f2ede4',
+        transcript,
+      },
+      tgTranslate: () => this.setState((st) => ({ tg: { ...st.tg, translate: !st.tg.translate } })),
+      tgSpeech: () => this.setState((st) => ({ tg: { ...st.tg, speech: !st.tg.speech } })),
+      toggles: { sign: [toggle('translate', t.translateMine), toggle('auto', t.autoSend)], speech: [toggle('speech', t.speechSub), toggle('tts', t.tts)] },
+      eng: { cBg: this.state.engine === 'cloud' ? INK : 'transparent', cFg: this.state.engine === 'cloud' ? PAPER : INK, lBg: this.state.engine === 'local' ? INK : 'transparent', lFg: this.state.engine === 'local' ? PAPER : INK },
+      setCloud: () => this.setState({ engine: 'cloud' }), setLocal: () => this.setState({ engine: 'local' }),
+      rec: { pose: String(wi % 6), word: word(wi), alt: short(WORDS[wi][other]), n: pad(wi + 1), guesses, pipe },
+      dict: WORDS.map((w, i) => ({ n: pad(i + 1), id: w.id, word: w[L], alt: w[other] })),
+      examples: [['kuda', 6], ['skolko', 7], ['kotoriy', 4]].map(([id, i]) => ({ word: short(WORDS[i][L]), src: `https://raw.githubusercontent.com/krslproject/krsl20/master/${id}.gif`, go: (e) => { e.preventDefault(); this.setState({ screen: 'rec' }); } })),
+      idChars: 'ST-4FD9QA'.split('').map((v, i) => ({ v, c: i < 3 ? 'rgba(241,236,226,.5)' : '#f1ece2', br: i < 8 ? '1.5px solid rgba(241,236,226,.35)' : '0' })),
+      dots21: Array.from({ length: 21 }, (_, i) => ({ c: [4, 8, 12, 16, 20].includes(i) ? SIG : 'rgba(241,236,226,.75)', s: [4, 8, 12, 16, 20].includes(i) ? '11px' : '6px' })),
+      devices,
+      mnavChats: mnav('chats'), mnavRec: mnav('rec'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "signtalk.hands.v1"
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 40
+    },
+    "application": {
+      "const": "SignTalk AI"
+    },
+    "containsVideo": {
+      "const": false
+    },
+    "containsAudio": {
+      "const": false
+    },
+    "splitPolicy": {
+      "const": "participantId: keep each participant in only one of train/validation/test"
+    },
+    "samples": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sample"
+      },
+      "maxItems": 200
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "exportedAt",
+    "application",
+    "containsVideo",
+    "containsAudio",
+    "splitPolicy",
+    "samples"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SignTalk AI hand-coordinate dataset v1",
+  "$comment": "Runtime validation also requires increasing tMs and recomputes quality. This schema cannot prove gesture/label correctness or valid participant consent.",
+  "$defs": {
+    "point": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      ]
+    },
+    "hand": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "minItems": 21,
+          "maxItems": 21
+        }
+      ]
+    },
+    "frame": {
+      "type": "object",
+      "properties": {
+        "tMs": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2500
+        },
+        "left": {
+          "$ref": "#/$defs/hand"
+        },
+        "right": {
+          "$ref": "#/$defs/hand"
+        },
+        "poses": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        }
+      },
+      "required": [
+        "tMs",
+        "left",
+        "right",
+        "poses"
+      ],
+      "additionalProperties": false
+    },
+    "label": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "enum": [
+            "krsl",
+            "rsl",
+            "asl"
+          ]
+        },
+        "classId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$"
+        },
+        "ru": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "kk": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": [
+        "language",
+        "classId",
+        "ru",
+        "kk"
+      ],
+      "additionalProperties": false
+    },
+    "quality": {
+      "type": "object",
+      "properties": {
+        "frames": {
+          "type": "integer",
+          "minimum": 12,
+          "maximum": 180
+        },
+        "handFrames": {
+          "type": "integer",
+          "minimum": 12,
+          "maximum": 180
+        },
+        "handCoverage": {
+          "type": "number",
+          "minimum": 0.6,
+          "maximum": 1
+        },
+        "observedFps": {
+          "type": "number",
+          "minimum": 5
+        },
+        "maxGapMs": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        },
+        "issues": {
+          "type": "array",
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "frames",
+        "handFrames",
+        "handCoverage",
+        "observedFps",
+        "maxGapMs",
+        "issues"
+      ],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": "signtalk.hands.v1"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 40
+        },
+        "label": {
+          "$ref": "#/$defs/label"
+        },
+        "participantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "consent": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "const": "local-hands-2026-11-17"
+            },
+            "acceptedAt": {
+              "type": "string",
+              "format": "date-time",
+              "maxLength": 40
+            },
+            "scope": {
+              "const": "local-landmarks-and-export"
+            }
+          },
+          "required": [
+            "version",
+            "acceptedAt",
+            "scope"
+          ],
+          "additionalProperties": false
+        },
+        "source": {
+          "const": "camera"
+        },
+        "camera": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "frameRate": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "width",
+            "height",
+            "frameRate"
+          ],
+          "additionalProperties": false
+        },
+        "tracker": {
+          "type": "object",
+          "properties": {
+            "library": {
+              "const": "@mediapipe/tasks-vision"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "featureSet": {
+              "enum": [
+                "hands_pose",
+                "hands_pose_lips"
+              ]
+            },
+            "delegate": {
+              "enum": [
+                "GPU",
+                "CPU"
+              ]
+            },
+            "landmarkModel": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "library",
+            "version",
+            "featureSet",
+            "delegate",
+            "landmarkModel"
+          ],
+          "additionalProperties": false
+        },
+        "coordinates": {
+          "const": "mediapipe-normalized-xyz-unmirrored"
+        },
+        "featureVersion": {
+          "const": "raw-hands-xyz-v1"
+        },
+        "durationMs": {
+          "const": 2500
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/frame"
+          },
+          "minItems": 12,
+          "maxItems": 180
+        },
+        "quality": {
+          "$ref": "#/$defs/quality"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "id",
+        "recordedAt",
+        "label",
+        "participantId",
+        "sessionId",
+        "consent",
+        "source",
+        "camera",
+        "tracker",
+        "coordinates",
+        "featureVersion",
+        "durationMs",
+        "frames",
+        "quality"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

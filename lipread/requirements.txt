@@ -1,0 +1,13 @@
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+mediapipe==0.10.14
+opencv-python-headless<4.11
+scikit-image
+scipy
+av>=12,<14
+six
+numpy<2
+fastapi
+uvicorn
+python-multipart

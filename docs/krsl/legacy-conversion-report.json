@@ -1,0 +1,10 @@
+{
+  "source_sha256": "b6ce9e9ec60a77ca63c8de91fa1d2abde61927336f6409b072e6698c3842ce88",
+  "onnx_sha256": "6137b6a76edbdb68ae40f7507016e2951bb39fd2218f9d58064c6b5264fbbe37",
+  "max_logit_errors": [
+    4.291534423828125e-06,
+    3.7550926208496094e-06
+  ],
+  "accuracy_evaluated": false,
+  "note": "Equation parity only. Browser tracking differs from the old upstream extractor; camera compatibility needs signer testing."
+}

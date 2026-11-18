@@ -1,0 +1,38 @@
+# Render Blueprint: one web service runs the site, the API and the WebSocket hub
+# (chat + video-call signalling). Accounts, chats and calls are stored in the
+# Supabase PostgreSQL database (DATABASE_URL), so no Render disk is needed.
+# Dashboard → New → Blueprint → pick this repository.
+services:
+  - type: web
+    name: signtalk
+    runtime: node
+    # The Supabase database is in Sydney (ap-southeast-2); Singapore is the closest
+    # Render region, so every database query is ~4x faster than from the US/EU.
+    region: singapore
+    # "free" works (the database lives in Supabase), but a free instance sleeps
+    # after ~15 minutes without visitors and takes ~1 minute to wake up.
+    # "starter" stays awake.
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Supabase → Connect → "Session pooler" URI (IPv4), with the database password filled in:
+      # postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+      - key: DATABASE_URL
+        sync: false
+      # Optional: TURN relay for callers behind strict NAT / mobile networks.
+      # Comma-separated, e.g. "turn:turn.example.com:3478,turns:turn.example.com:5349"
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
+      # Optional: cloud sign recognition on the "Распознавание" page.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false

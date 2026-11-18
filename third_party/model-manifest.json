@@ -1,0 +1,74 @@
+{
+  "generated": "2026-11-17",
+  "upstream_gesturesign_commit": "ffc0578e68449676b6e9545da82092679914e8c8",
+  "krsl_data_commit": "679ffe14184c6a374b2d8a3daeffabbe99e9bc6d",
+  "easy_sign_commit": "b1be3c089407acb128f75ed335a68f94851f0906",
+  "files": [
+    {
+      "file": "web/public/models/model.onnx",
+      "bytes": 5622355,
+      "sha256": "2fc9038cc409a5117a3eb2bb350b005663957a03e19f24c24b1f209c703c753d"
+    },
+    {
+      "file": "web/public/models/model-meta.json",
+      "bytes": 865,
+      "sha256": "1a3f2378c270838f0f315f3151aadd669edf2336a515b8d57be96ce29b8d914d"
+    },
+    {
+      "file": "web/public/models/labels.json",
+      "bytes": 35890,
+      "sha256": "96244c54104bc5544f57672fdcc1de48ef46f27663ce23c2957c9035209b6439"
+    },
+    {
+      "file": "web/public/models/krsl/model.onnx",
+      "bytes": 70531,
+      "sha256": "d2098c4faeb9e95d2a6ce9c3f1b9ad05ef216e2697f1ea80e06565532b0e78c5"
+    },
+    {
+      "file": "web/public/models/krsl/meta.json",
+      "bytes": 178,
+      "sha256": "04d053bb95d7d377ad7252274f4c7501c8784f8044ef8a141efd652816765910"
+    },
+    {
+      "file": "web/public/models/krsl/labels.json",
+      "bytes": 791,
+      "sha256": "18564382aef01c584bfc9d364b16b996f2604216dd44aa10dae629ac82eef285"
+    },
+    {
+      "file": "web/public/models/krsl/report.json",
+      "bytes": 2220,
+      "sha256": "e52275bcf5217c92328b8388e546ede2bf321af1c8cb5e43943999bb0ba2d531"
+    },
+    {
+      "file": "web/public/models/rsl/model.onnx",
+      "bytes": 38759623,
+      "sha256": "860ecb5e5aff91b4709016c2dc4f5744eea53e024f80c0b3b8f0f916f6bdb949"
+    },
+    {
+      "file": "web/public/models/rsl/meta.json",
+      "bytes": 180,
+      "sha256": "1fea0077025f70bbe8781c1f0eb4874844234c3cfc15b740c1c6d57c6eb492ad"
+    },
+    {
+      "file": "web/public/models/rsl/labels.json",
+      "bytes": 84064,
+      "sha256": "523eaac2ceb1ea1ecf222564ffb267e15a623409ade7ad48abf15cff2ec62f1f"
+    },
+    {
+      "file": "web/public/models/bukva/model.onnx",
+      "bytes": 9082357,
+      "sha256": "c8bff60a5da17f63d45a4d0fa348b402938d2fb5db8c672cf8b7ca04ec0c3dba"
+    },
+    {
+      "file": "web/public/models/bukva/meta.json",
+      "bytes": 287,
+      "sha256": "4e91f0d2f3dc6bbf1f456820150b845400cf0a36e78dc2715c4051f7f128b54a"
+    },
+    {
+      "file": "web/public/models/bukva/labels.json",
+      "bytes": 1079,
+      "sha256": "fb80e1fe59a1ddf98a8943ec1b80f42fee3f6961f8be6db7b45d1adb06a822a9"
+    }
+  ],
+  "bukva_commit": "174b7e3c04336e81ccbb19a4d8ad422fb29cfa6a"
+}

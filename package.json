@@ -1,0 +1,23 @@
+{
+  "name": "signtalk-ai",
+  "private": true,
+  "version": "0.7.0",
+  "description": "SignTalk: accounts, chat and video calls with live sign-language captions",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "npm --prefix web ci && npm --prefix web run build",
+    "start": "node server/app.mjs",
+    "dev": "npm --prefix web run dev",
+    "test": "node --test server/*.test.mjs",
+    "lipread": "node tools/lipread.mjs",
+    "lipread:setup": "sh lipread/setup.sh"
+  },
+  "dependencies": {
+    "pg": "8.16.3",
+    "ws": "8.22.1"
+  }
+}

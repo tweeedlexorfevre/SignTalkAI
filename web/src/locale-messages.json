@@ -1,0 +1,177 @@
+{
+  "No one in view": ["Никого нет в кадре", "Кадрда адам жоқ"],
+  "Hands not in view": ["Руки не видны", "Қол көрінбейді"],
+  "Move back: shoulders out of view": [
+    "Отойдите: плечи не видны",
+    "Артқа шегініңіз: иық көрінбейді"
+  ],
+  "More than one person in view": ["В кадре несколько человек", "Кадрда бірнеше адам бар"],
+  "Tracking": ["Отслеживание", "Бақылау"],
+  "Reading sign…": ["Распознавание жеста…", "Ымды тану…"],
+  "Waiting for landmarks…": ["Ожидание точек…", "Нүктелерді күту…"],
+  "Camera and landmarks": ["Камера и точки тела", "Камера және дене нүктелері"],
+  "Tracked hands and upper body": [
+    "Отслеживаемые руки и верхняя часть тела",
+    "Қол мен дененің жоғарғы бөлігін бақылау"
+  ],
+  "Live · on this device": ["Камера · локально", "Камера · осы құрылғыда"],
+  "Replay ·": ["Запись ·", "Жазба ·"],
+  "Camera paused": ["Камера приостановлена", "Камера уақытша тоқтатылды"],
+  "Sign to your camera": ["Покажите жест камере", "Камераға ым көрсетіңіз"],
+  "The camera stopped when this tab was hidden.": [
+    "Камера остановлена при скрытии вкладки.",
+    "Қойынды жасырылғанда камера тоқтатылды."
+  ],
+  "Video stays on this device. Only hand and body landmarks are computed, in your browser.": [
+    "Видео обрабатывается на устройстве. В браузере вычисляются точки рук и тела.",
+    "Видео осы құрылғыда өңделеді. Браузер қол мен дене нүктелерін есептейді."
+  ],
+  "Resume camera": ["Продолжить", "Жалғастыру"],
+  "Start camera": ["Включить камеру", "Камераны қосу"],
+  "Replay a clip": ["Посмотреть ASL-пример", "ASL мысалын көру"],
+  "Waiting for the camera…": ["Ожидание камеры…", "Камераны күту…"],
+  "Replay a clip instead": ["Открыть ASL-пример", "ASL мысалын ашу"],
+  "Try again": ["Повторить", "Қайталау"],
+  "Clip finished · play again": ["Запись завершена · повторить", "Жазба аяқталды · қайталау"],
+  "Stop camera": ["Выключить камеру", "Камераны өшіру"],
+  "Stop replay": ["Остановить запись", "Жазбаны тоқтату"],
+  "Play again": ["Повторить", "Қайталау"],
+  "Hide clips": ["Скрыть примеры", "Мысалдарды жасыру"],
+  "Replay clips": ["ASL-примеры", "ASL мысалдары"],
+  "Landmark animations made by the training pipeline. They show the recogniser working without a camera; they are motion patterns, not real signs.": [
+    "Синтетические движения для проверки модели. Это не настоящие жесты.",
+    "Модельді тексеруге арналған жасанды қимылдар. Бұлар нақты ымдар емес."
+  ],
+  "Signs recorded by people the model never trained on, played through the same recogniser.": [
+    "Записи жестов людей, не участвовавших в обучении исходной модели.",
+    "Бастапқы модельді оқытуға қатыспаған адамдардың ым жазбалары."
+  ],
+  "Close the clip list": ["Закрыть список", "Тізімді жабу"],
+  "Loading clips…": ["Загрузка примеров…", "Мысалдар жүктелуде…"],
+  "The clips could not be loaded.": ["Не удалось загрузить примеры.", "Мысалдар жүктелмеді."],
+  "Retry": ["Повторить", "Қайталау"],
+  "Clips:": ["Записи:", "Жазбалар:"],
+  "Loading the sign model…": ["Загрузка ASL-модели…", "ASL моделі жүктелуде…"],
+  "The sign model did not load": ["ASL-модель не загрузилась", "ASL моделі жүктелмеді"],
+  "Check your connection, then try again.": [
+    "Проверьте подключение и повторите.",
+    "Байланысты тексеріп, қайталаңыз."
+  ],
+  "Camera access was blocked": ["Доступ к камере запрещён", "Камераға рұқсат берілмеген"],
+  "Allow the camera in your browser’s site settings and try again, or replay a recorded clip instead.": [
+    "Разрешите камеру в настройках сайта или откройте ASL-пример.",
+    "Сайт баптауларында камераға рұқсат беріңіз немесе ASL мысалын ашыңыз."
+  ],
+  "No camera found": ["Камера не найдена", "Камера табылмады"],
+  "Connect a camera and try again, or replay a recorded clip instead.": [
+    "Подключите камеру или откройте ASL-пример.",
+    "Камераны қосыңыз немесе ASL мысалын ашыңыз."
+  ],
+  "The camera is in use": ["Камера занята", "Камера басқа қолданбада ашық"],
+  "Another app or tab is using the camera. Close it and try again, or replay a recorded clip instead.": [
+    "Закройте другую программу с камерой и повторите.",
+    "Камераны пайдаланатын басқа қолданбаны жауып, қайталаңыз."
+  ],
+  "This browser cannot share a camera here": [
+    "Камера недоступна в браузере",
+    "Браузерде камера қолжетімсіз"
+  ],
+  "Camera access needs a secure (https) page in a current browser. You can still replay a recorded clip.": [
+    "Откройте сайт через HTTPS или localhost в современном браузере.",
+    "Сайтты заманауи браузерде HTTPS немесе localhost арқылы ашыңыз."
+  ],
+  "The camera could not start": ["Не удалось включить камеру", "Камераны қосу мүмкін болмады"],
+  "Try again, or replay a recorded clip instead.": [
+    "Повторите или откройте ASL-пример.",
+    "Қайталаңыз немесе ASL мысалын ашыңыз."
+  ],
+  "Practise a sign. Your attempt is scored by how strongly the model saw this sign, the way the dataset was meant to help hearing parents learn ASL.": [
+    "Тренировка отдельных ASL-жестов. Оценка модели не является оценкой владения языком.",
+    "Жеке ASL ымдарын жаттықтыру. Модель бағасы тілді меңгеру деңгейін көрсетпейді."
+  ],
+  "Sign this": ["Покажите этот ASL-жест", "Осы ASL ымын көрсетіңіз"],
+  "How to sign it": ["Посмотреть жест", "Ымды көру"],
+  "(opens an ASL dictionary in a new tab)": [
+    "(ASL-словарь в новой вкладке)",
+    "(ASL сөздігі жаңа қойындыда ашылады)"
+  ],
+  "Another sign": ["Другой жест", "Басқа ым"],
+  "Sign it to the camera, or replay a clip, to get a score.": [
+    "Покажите жест камере или откройте ASL-пример.",
+    "Камераға ым көрсетіңіз немесе ASL мысалын ашыңыз."
+  ],
+  "Move back so your shoulders are in view": [
+    "Отойдите, чтобы были видны плечи",
+    "Иығыңыз көрінетіндей артқа шегініңіз"
+  ],
+  "Not quite yet": ["Пока не совпало", "Әзірге сәйкес келмеді"],
+  "Attempt": ["Попытка", "Талпыныс"],
+  "Next sign": ["Следующий жест", "Келесі ым"],
+  "This browser is blocking storage, so gestures last until you leave the page.": [
+    "Хранилище браузера недоступно: примеры сохранятся только до закрытия страницы.",
+    "Браузер жады қолжетімсіз: мысалдар бет жабылғанша ғана сақталады."
+  ],
+  "Give the gesture a name.": ["Введите название жеста.", "Ымның атауын енгізіңіз."],
+  "Keep the name under 25 characters.": [
+    "Название должно быть короче 25 символов.",
+    "Атауы 25 таңбадан қысқа болсын."
+  ],
+  "You already have a gesture with that name.": [
+    "Жест с таким названием уже есть.",
+    "Осындай атауы бар ым бар."
+  ],
+  "This browser refused to update its storage; the change lasts until you leave.": [
+    "Изменения не сохранились в браузере.",
+    "Өзгерістер браузерде сақталмады."
+  ],
+  "Teach any gesture with": ["Добавьте персональный жест:", "Жеке ымды қосыңыз:"],
+  "takes. It is matched by the model’s embedding, so it works for anyone, whether or not they sign ASL. Saved on this device only.": [
+    "повторов. Это персональные примеры, а не обученный местный жестовый язык. Сохранение на этом устройстве.",
+    "қайталау. Бұл жергілікті ым тілінің дайын моделі емес, жеке мысалдар. Осы құрылғыда сақталады."
+  ],
+  "New gesture": ["Новый жест", "Жаңа ым"],
+  "Add": ["Добавить", "Қосу"],
+  "gesture": ["жест", "ым"],
+  "Recording “": ["Запись «", "«"],
+  "”: take": ["»: повтор", "» жазбасы: қайталау"],
+  "of": ["из", "/"],
+  ". Make the gesture, then lower your hands.": [
+    ". Покажите жест и опустите руки.",
+    ". Ымды көрсетіп, қолыңызды түсіріңіз."
+  ],
+  "Add a gesture and record": ["Добавьте жест и запишите", "Ым қосып,"],
+  "takes, then try it out.": ["повтора, затем проверьте.", "рет жазыңыз, содан кейін тексеріңіз."],
+  "Make one of your gestures to see it recognised.": [
+    "Покажите один из своих жестов.",
+    "Өзіңіздің бір ымыңызды көрсетіңіз."
+  ],
+  "Recognised": ["Найдено совпадение", "Сәйкестік табылды"],
+  "Similarity": ["Сходство", "Ұқсастық"],
+  "Not sure": ["Не распознано", "Танылмады"],
+  "Closest was “": ["Ближайший вариант: «", "Ең жақын нұсқа: «"],
+  "”, but not by enough to say so.": [
+    "», но сходства недостаточно.",
+    "», бірақ ұқсастық жеткіліксіз."
+  ],
+  "Your gestures": ["Ваши жесты", "Сіздің ымдарыңыз"],
+  "takes": ["повторов", "қайталау"],
+  "Add take": ["Добавить повтор", "Қайталау қосу"],
+  "Record": ["Записать", "Жазу"],
+  "for": ["для", "үшін"],
+  "Stop": ["Остановить", "Тоқтату"],
+  "recording": ["запись", "жазба"],
+  "gestures · stored in this browser as numbers, never video": [
+    "жестов · в браузере хранятся числовые признаки, без видео",
+    "ым · браузерде видеосыз сандық белгілер сақталады"
+  ],
+  "Delete all": ["Удалить всё", "Барлығын жою"],
+  "Cancel": ["Отмена", "Бас тарту"],
+  "Clear all": ["Очистить всё", "Барлығын тазарту"],
+  "Recognise": ["Распознавание", "Тану"],
+  "Practice": ["Тренировка ASL", "ASL жаттығуы"],
+  "Teach your own": ["Свои жесты", "Өз ымдарым"],
+  "Teach": ["Свои жесты", "Өз ымдарым"],
+  "Mode": ["Режим", "Режим"],
+  "Sign": ["Жест", "Ым"],
+  "synthetic frames": ["синтетических кадров", "жасанды кадр"]
+}

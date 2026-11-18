@@ -1,0 +1,192 @@
+/*
+ * SignTalk design system — «21 точка».
+ *
+ * The tracker sees a hand as 21 landmarks; the brand is built from that.
+ * Three materials: warm paper, ink, and one hot signal colour. Signal is
+ * reserved for things that came from hands — sign translations, live
+ * recognition, fingertips in the mark — so colour carries meaning.
+ *
+ * Imported last (see main.tsx), so these tokens are the single source of truth.
+ */
+
+:root {
+  --font-display: 'Unbounded Variable', 'Onest Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Onest Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Paper */
+  --paper: #f1ece2;
+  --surface: #fbf8f2;
+  --surface-muted: #e9e2d4;
+  --surface-raised: #ffffff;
+  --line: #ddd4c3;
+  --line-strong: #c4b9a4;
+
+  /* Ink */
+  --ink: #16130e;
+  --ink-muted: #675f52;
+  --ink-faint: #9a917f;
+
+  /* Signal: fills use --signal, text uses --accent (AA on paper). */
+  --signal: #ff5a1f;
+  --signal-ink: #16130e;
+  --signal-soft: #fbd9c6;
+  --accent: #b93a0b;
+  --accent-ink: #ffffff;
+  --accent-soft: #f7e0d2;
+
+  --success: #1d7247;
+  --success-soft: #d9ecdf;
+  --warn: #8a4b0b;
+  --warn-soft: #f6e5c4;
+  --danger: #b42318;
+  --danger-soft: #f8dcd7;
+  --focus: #2459d8;
+
+  --bubble-mine: var(--ink);
+  --bubble-mine-ink: var(--paper);
+  --grid-dot: rgb(22 19 14 / 13%);
+
+  --stage: #12100d;
+  --stage-ink: #f2ede4;
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --shadow: 0 1px 0 rgb(22 19 14 / 4%), 0 12px 32px -12px rgb(22 19 14 / 14%);
+  --shadow-pop: 0 2px 0 rgb(22 19 14 / 5%), 0 24px 48px -16px rgb(22 19 14 / 28%);
+  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+  color-scheme: light;
+}
+
+/* Accessibility modes, applied on .product-shell. */
+.high-contrast {
+  --paper: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f0f0f0;
+  --surface-raised: #ffffff;
+  --ink: #000000;
+  --ink-muted: #1f1f1f;
+  --ink-faint: #3a3a3a;
+  --line: #000000;
+  --line-strong: #000000;
+  --accent: #9a2c00;
+  --accent-ink: #ffffff;
+  --accent-soft: #ffe6d9;
+  --signal: #ff5a1f;
+  --signal-ink: #000000;
+  --signal-soft: #ffe6d9;
+  --bubble-mine: #000000;
+  --bubble-mine-ink: #ffffff;
+  --grid-dot: transparent;
+  --shadow: none;
+  --shadow-pop: none;
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--signal-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+h1 {
+  font-family: var(--font-display);
+}
+
+/* --- the mark ------------------------------------------------------------- */
+.landmark-hand {
+  overflow: visible;
+  color: currentColor;
+}
+.landmark-hand line {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.42;
+}
+.landmark-hand circle {
+  fill: currentColor;
+}
+.landmark-hand circle.tip {
+  fill: var(--signal);
+}
+.landmark-hand.is-animated line {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: lh-draw 0.7s var(--ease) forwards;
+  animation-delay: calc(var(--i) * 45ms + 300ms);
+}
+.landmark-hand.is-animated circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  animation: lh-pop 0.45s var(--ease) forwards;
+  animation-delay: calc(var(--i) * 45ms);
+}
+.landmark-hand.is-animated circle.tip {
+  animation:
+    lh-pop 0.45s var(--ease) forwards,
+    lh-blink 2.8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 45ms), calc(var(--i) * 120ms + 1.6s);
+}
+@keyframes lh-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes lh-pop {
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes lh-blink {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.45);
+    opacity: 0.75;
+  }
+}
+
+/* A field of tracking points, used behind conversations. */
+.dot-grid {
+  background-image: radial-gradient(var(--grid-dot) 1.1px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: 11px 11px;
+}
+
+/* Mono labels: IDs, timestamps, kickers. */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'zero';
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landmark-hand.is-animated line,
+  .landmark-hand.is-animated circle {
+    animation: none;
+    stroke-dashoffset: 0;
+    transform: none;
+  }
+}

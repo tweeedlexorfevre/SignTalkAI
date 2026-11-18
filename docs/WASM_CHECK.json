@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "krsl",
+    "backend": "onnxruntime-web / WASM",
+    "input": "held-out KRSL example",
+    "outputs": 10,
+    "ms": 5
+  },
+  {
+    "kind": "rsl",
+    "backend": "onnxruntime-web / WASM",
+    "input": "zero RGB tensor, operator smoke test only",
+    "outputs": 1599,
+    "ms": 1953
+  },
+  {
+    "kind": "bukva",
+    "backend": "onnxruntime-web / WASM",
+    "input": "mean-grey RGB tensor, operator smoke test only",
+    "outputs": 34,
+    "ms": 191
+  }
+]

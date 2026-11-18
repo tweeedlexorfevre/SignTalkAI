@@ -1,0 +1,66 @@
+{
+  "name": "signtalk-ai-web",
+  "private": true,
+  "version": "0.7.0",
+  "description": "SignTalk: gesture recognition with a shared KRSL dictionary, RU/KZ text and speech",
+  "license": "MIT",
+  "author": "Shashank Yadav",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "assets": "node scripts/fetch-assets.mjs",
+    "dev": "npm run assets && node ../tools/dev.mjs",
+    "build": "npm run assets && tsc -b && vite build",
+    "build:test": "npm run assets && vite build --mode test --outDir dist-test",
+    "preview:test": "vite preview --outDir dist-test --port 5334 --strictPort",
+    "preview": "node ../tools/serve.mjs",
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:server": "node --test ../server/*.test.mjs",
+    "test:e2e": "npm run build:test && playwright test",
+    "bench": "node scripts/bench.mjs",
+    "cold-start": "node scripts/cold-start.mjs",
+    "preview:ready": "node ../tools/serve.mjs",
+    "verify:models": "node scripts/verify-local-models.mjs",
+    "test:messenger": "playwright test -c playwright.messenger.config.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/onest": "^5.3.1",
+    "@fontsource-variable/unbounded": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@mediapipe/tasks-vision": "1.2.2",
+    "lucide-react": "1.67.0",
+    "onnxruntime-web": "1.31.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/vite": "4.3.4",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "fake-indexeddb": "6.2.7",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "tailwindcss": "4.3.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  },
+  "overrides": {
+    "minimatch@^10": "11.0.4"
+  }
+}
