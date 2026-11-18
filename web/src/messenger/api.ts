@@ -122,6 +122,27 @@ export function errorText(error: unknown, t: (ru: string, kk: string) => string)
       return t('Проверьте заполнение полей.', 'Өрістерді тексеріңіз.');
     case 'invalid_message':
       return t('Сообщение пустое или слишком длинное.', 'Хабарлама бос немесе тым ұзын.');
+    case 'gesture_exists':
+      return t(
+        'В этом наборе уже есть жест с таким значением.',
+        'Бұл жинақта мұндай мағыналы ым бар.',
+      );
+    case 'too_many_gestures':
+      return t('Достигнут предел жестов.', 'Ымдар шегіне жетті.');
+    case 'too_many_takes':
+      return t('У жеста уже 5 повторов.', 'Ымда 5 қайталау бар.');
+    case 'set_exists':
+      return t('Набор с таким названием уже есть.', 'Мұндай атаулы жинақ бар.');
+    case 'too_many_sets':
+      return t('Достигнут предел наборов.', 'Жинақтар шегіне жетті.');
+    case 'last_set':
+      return t('Нельзя удалить последний набор.', 'Соңғы жинақты жоюға болмайды.');
+    case 'set_not_found':
+      return t('Набор уже удалён.', 'Жинақ жойылған.');
+    case 'take_not_found':
+      return t('Повтор уже удалён.', 'Қайталау жойылған.');
+    case 'gesture_not_found':
+      return t('Жест уже удалён.', 'Ым жойылған.');
     case 'unauthorized':
       return t('Сессия завершена. Войдите снова.', 'Сессия аяқталды. Қайта кіріңіз.');
     default:

@@ -13,6 +13,7 @@ const types = {
 };
 
 const userColumns = 'id, public_id, username, display_name, created_at';
+const gestureColumns = 'id, set_id, name, model_version, takes, previews, created_at, updated_at';
 const COMPLETED_CALL = '%"status":"completed"%';
 
 /**
@@ -310,5 +311,75 @@ export class PgStore {
   }
   async finishCall(id, status, now) {
     await this.run('UPDATE calls SET status = $1, ended_at = $2 WHERE id = $3', [status, now, id]);
+  }
+
+  // --- gesture sets and personal gestures ---------------------------------
+  async setsOf(ownerId) {
+    return this.all(
+      'SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = $1 ORDER BY created_at, id',
+      [ownerId],
+    );
+  }
+  async setById(ownerId, id) {
+    return this.one('SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = $1 AND id = $2', [
+      ownerId,
+      id,
+    ]);
+  }
+  async insertSet({ id, ownerId, name, now }) {
+    return this.one(
+      `INSERT INTO gesture_sets (id, owner_id, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)
+       RETURNING id, name, created_at, updated_at`,
+      [id, ownerId, name, now],
+    );
+  }
+  async renameSet(ownerId, id, name, now) {
+    return this.one(
+      `UPDATE gesture_sets SET name = $3, updated_at = $4 WHERE owner_id = $1 AND id = $2
+       RETURNING id, name, created_at, updated_at`,
+      [ownerId, id, name, now],
+    );
+  }
+  async deleteSet(ownerId, id) {
+    return (await this.run('DELETE FROM gesture_sets WHERE owner_id = $1 AND id = $2', [ownerId, id])) > 0;
+  }
+  /** Gestures saved before sets existed go into `setId`. */
+  async adoptOrphans(ownerId, setId) {
+    return this.run('UPDATE gestures SET set_id = $2 WHERE owner_id = $1 AND set_id IS NULL', [ownerId, setId]);
+  }
+
+  /** Names only (for duplicate checks), without the takes. */
+  async gestureNames(ownerId) {
+    return this.all('SELECT id, set_id, name FROM gestures WHERE owner_id = $1', [ownerId]);
+  }
+  async gesturesOf(ownerId) {
+    return this.all(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 ORDER BY created_at, id`, [ownerId]);
+  }
+  async gestureById(ownerId, id) {
+    return this.one(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 AND id = $2`, [ownerId, id]);
+  }
+  async insertGesture({ id, ownerId, setId, name, modelVersion, takes, previews, now }) {
+    return this.one(
+      `INSERT INTO gestures (id, owner_id, set_id, name, model_version, takes, previews, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $8)
+       RETURNING ${gestureColumns}`,
+      [id, ownerId, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now],
+    );
+  }
+  async updateGesture(ownerId, id, { setId, name, modelVersion, takes, previews, now }) {
+    return this.one(
+      `UPDATE gestures SET set_id = $3, name = $4, model_version = $5, takes = $6::jsonb, previews = $7::jsonb, updated_at = $8
+        WHERE owner_id = $1 AND id = $2
+        RETURNING ${gestureColumns}`,
+      [ownerId, id, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now],
+    );
+  }
+  async deleteGesture(ownerId, id) {
+    return (await this.run('DELETE FROM gestures WHERE owner_id = $1 AND id = $2', [ownerId, id])) > 0;
+  }
+  async clearGestures(ownerId, setId) {
+    return setId
+      ? this.run('DELETE FROM gestures WHERE owner_id = $1 AND set_id = $2', [ownerId, setId])
+      : this.run('DELETE FROM gestures WHERE owner_id = $1', [ownerId]);
   }
 }

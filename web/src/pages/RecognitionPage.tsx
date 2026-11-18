@@ -1,156 +1,70 @@
 import { useEffect } from 'react';
-import { Hand, Smile } from 'lucide-react';
+import { CaseSensitive, Hand } from 'lucide-react';
 import type { Session } from '../app/session';
 import type { Locale } from '../locale';
 import { useLocale } from '../locale';
-import { CloudPanel } from '../cloud/CloudPanel';
-import { NativePanel } from '../components/NativePanel';
-import { AslWorkspace } from '../components/AslWorkspace';
 import { FingerspellPanel } from '../components/FingerspellPanel';
+import { PersonalWorkspace } from '../gestures/PersonalWorkspace';
 import { useRecognitionPreferences, setRecognitionPreferences } from '../recognition/preferences';
 import { ResultEditor } from '../recognition/ResultEditor';
-import { LipReadPanel } from '../lipread/LipReadPanel';
 export default function RecognitionPage({
   session,
   language,
   setLanguage,
-  model,
   onPick,
 }: {
   session: Session;
   language: Locale;
   setLanguage: (value: Locale) => void;
-  model: string;
   onPick: (text: string) => void;
 }) {
   const { t } = useLocale();
-  const prefs = useRecognitionPreferences();
-  const { signLanguage: profile, engine, method } = prefs;
+  const { signLanguage: profile } = useRecognitionPreferences();
   const composer = <ResultEditor language={language} />;
   useEffect(() => {
     session.stopCamera();
     session.stopReplay();
-    if (method === 'lips') return;
-    if (engine === 'local') session.warmUp();
-    session.setRecognitionEnabled(engine === 'local' && profile === 'asl');
+    if (profile === 'personal') session.warmUp();
+    // Own gestures are read by the continuous spotter (gestures/spotter.ts), not the session's recogniser.
+    session.setRecognitionEnabled(false);
     return () => {
       session.stopCamera();
       session.stopReplay();
       session.setRecognitionEnabled(false);
     };
-  }, [session, engine, profile, method]);
-  const methodSwitch = (
-    <div
-      className="engine-switch method-switch"
-      role="group"
-      aria-label={t('Что распознавать', 'Нені тану')}
-    >
-      <button
-        aria-pressed={method === 'signs'}
-        onClick={() => {
-          setRecognitionPreferences({ method: 'signs' });
-        }}
-      >
-        <Hand size={17} aria-hidden />
-        {t('Язык жестов', 'Ым тілі')}
-      </button>
-      <button
-        aria-pressed={method === 'lips'}
-        onClick={() => {
-          setRecognitionPreferences({ method: 'lips' });
-        }}
-      >
-        <Smile size={17} aria-hidden />
-        {t('Чтение по губам', 'Ерін оқу')}
-      </button>
-    </div>
-  );
-  if (method === 'lips') {
-    return (
-      <>
-        {methodSwitch}
-        <LipReadPanel onPick={onPick} composer={composer} />
-      </>
-    );
-  }
+  }, [session, profile]);
   return (
     <>
-      {methodSwitch}
-      <div className="experiment-note">
-        <b>{t('Жест → текст → озвучивание', 'Ым → мәтін → дыбыстау')}</b>
-        <p>
-          {t(
-            'Покажите один жест, проверьте результат и озвучьте его. Начните со словаря KRSL: примеры и названия общие для облачного и локального режимов. Распознавание может ошибаться.',
-            'Бір ым көрсетіңіз, нәтижені тексеріп, дыбыстаңыз. KRSL сөздігінен бастаңыз: бұлттық және жергілікті режимдердің мысалдары мен атаулары ортақ. Тану қате болуы мүмкін.',
-          )}
-        </p>
-        <a href="#gestures">{t('Какие жесты можно показать', 'Қандай ым көрсетуге болады')} →</a>
-      </div>
       <div className="conversation-toolbar">
         <div
-          className="engine-switch"
+          className="engine-switch method-switch"
           role="group"
-          aria-label={t('Способ распознавания', 'Тану тәсілі')}
+          aria-label={t('Что распознавать', 'Нені тану')}
         >
           <button
-            aria-pressed={engine === 'cloud'}
+            aria-pressed={profile === 'personal'}
             onClick={() => {
-              setRecognitionPreferences({ engine: 'cloud' });
+              setRecognitionPreferences({ signLanguage: 'personal' });
             }}
           >
-            {t('Облачный ИИ', 'Бұлттық ЖИ')}
+            <Hand size={17} aria-hidden />
+            {t('Свои жесты', 'Өз ымдарым')}
           </button>
           <button
-            aria-pressed={engine === 'local'}
+            aria-pressed={profile === 'bukva'}
             onClick={() => {
-              setRecognitionPreferences({ engine: 'local' });
+              setRecognitionPreferences({ signLanguage: 'bukva' });
             }}
           >
-            {t('На устройстве', 'Құрылғыда')}
+            <CaseSensitive size={17} aria-hidden />
+            {t('Русский алфавит', 'Орыс әліпбиі')}
           </button>
         </div>
-        {profile === 'bukva' && engine === 'cloud' ? (
-          <p className="inline-note">
-            {t('Алфавит распознаётся только на устройстве.', 'Әліпби тек құрылғыда танылады.')}
-          </p>
-        ) : null}
         <label className="inline-setting">
-          <span>{t('Жестовый язык / модель', 'Ым тілі / модель')}</span>
-          <select
-            value={profile}
-            aria-label={t('Жестовый язык / модель', 'Ым тілі / модель')}
-            onChange={(e) => {
-              setRecognitionPreferences({ signLanguage: e.target.value as typeof profile });
-            }}
-          >
-            <option value="krsl">{t('Казахстан · KRSL', 'Қазақстан · KRSL')}</option>
-            <option value="rsl">{t('Русский жестовый · РЖЯ', 'Орыс ым тілі · РЖЯ')}</option>
-            <option value="bukva">{t('Дактиль РЖЯ · алфавит', 'РЖЯ дактилі · әліпби')}</option>
-            <option value="asl">
-              {t('KRSL (тестовая подпись · модель ASL)', 'KRSL (сынақ белгісі · ASL моделі)')}
-            </option>
-          </select>
-        </label>
-        {engine === 'cloud' && profile === 'krsl' ? (
-          <label className="inline-setting">
-            <span>{t('Словарь облака', 'Бұлт сөздігі')}</span>
-            <select
-              value={prefs.vocabulary}
-              aria-label={t('Словарь облака', 'Бұлт сөздігі')}
-              onChange={(e) => {
-                setRecognitionPreferences({ vocabulary: e.target.value as 'krsl10' | 'free' });
-              }}
-            >
-              <option value="krsl10">{t('KRSL · 10 жестов', 'KRSL · 10 ым')}</option>
-              <option value="free">{t('Свободный · эксперимент', 'Еркін · тәжірибе')}</option>
-            </select>
-          </label>
-        ) : null}
-        <label className="inline-setting">
-          <span>{t('Язык текста и озвучивания', 'Мәтін және дыбыстау тілі')}</span>
+          <span>{t('Язык озвучивания', 'Дыбыстау тілі')}</span>
           <select
             value={language}
-            aria-label={t('Язык текста и озвучивания', 'Мәтін және дыбыстау тілі')}
+            aria-label={t('Язык озвучивания', 'Дыбыстау тілі')}
             onChange={(e) => {
               setLanguage(e.target.value as Locale);
             }}
@@ -160,37 +74,19 @@ export default function RecognitionPage({
           </select>
         </label>
         <a href="#gestures" className="text-link">
-          {t('Словарь и примеры', 'Сөздік және мысалдар')}
+          {t('Мои жесты', 'Менің ымдарым')}
         </a>
         <a href="#settings" className="text-link">
-          {t('Настройки распознавания', 'Тану баптаулары')}
+          {t('Настройки', 'Баптаулар')}
         </a>
       </div>
       {profile === 'bukva' ? (
         <FingerspellPanel session={session} onPick={onPick} composer={composer} />
-      ) : engine === 'cloud' ? (
-        <CloudPanel
-          key={`${profile}-${language}-${model}-${prefs.vocabulary}`}
-          language={profile}
-          output={language}
-          model={model}
-          onPick={onPick}
-          composer={composer}
-        />
-      ) : profile === 'asl' ? (
+      ) : (
         <>
-          <AslWorkspace session={session} output={language} onPick={onPick} />
+          <PersonalWorkspace session={session} />
           {composer}
         </>
-      ) : (
-        <NativePanel
-          key={`${profile}-${language}`}
-          kind={profile}
-          session={session}
-          output={language}
-          onPick={onPick}
-          composer={composer}
-        />
       )}
     </>
   );

@@ -15,6 +15,11 @@ export interface TestHook {
   injectEmpty(count: number): void;
   /** Push replay clip `index` with only the shoulders kept out of view (a partial signer). */
   injectPartial(index: number): Promise<void>;
+  /**
+   * Play replay clips back to back in real time, with no pause between them
+   * (fluent signing), through the same path as the camera.
+   */
+  playSequence(indices: number[]): Promise<void>;
 }
 
 declare global {
@@ -50,6 +55,17 @@ export function installTestHook(session: Session): void {
         return copy;
       });
       session.inject(frames, clip.fps);
+    },
+    async playSequence(indices) {
+      const all = await clips;
+      const parts = indices.map((i) => {
+        const clip = all[i];
+        if (!clip) throw new Error(`no replay clip ${i}`);
+        return clip;
+      });
+      const first = parts[0];
+      if (!first) return;
+      session.playReplay({ ...first, id: 'sequence', frames: parts.flatMap((c) => c.frames) });
     },
   };
   document.documentElement.dataset['testHook'] = 'ready';

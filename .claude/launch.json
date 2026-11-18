@@ -2,6 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "signtalk-api",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PORT=5331",
+        "node",
+        "server/app.mjs"
+      ],
+      "port": 5331
+    },
+    {
       "name": "signtalk",
       "runtimeExecutable": "node",
       "runtimeArgs": [
@@ -37,6 +47,31 @@
         "5338"
       ],
       "port": 5338
+    },
+    {
+      "name": "signtalk-api-local",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=",
+        "DATABASE_PATH=data/verify.db",
+        "node",
+        "server/app.mjs"
+      ],
+      "port": 5331
+    },
+    {
+      "name": "signtalk-dev-testhook",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "web/node_modules/vite/bin/vite.js",
+        "web",
+        "--mode",
+        "test",
+        "--port",
+        "5335",
+        "--strictPort"
+      ],
+      "port": 5335
     }
   ]
 }

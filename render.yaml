@@ -31,8 +31,3 @@ services:
         sync: false
       - key: TURN_CREDENTIAL
         sync: false
-      # Optional: cloud sign recognition on the "Распознавание" page.
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: GEMINI_MODEL
-        sync: false

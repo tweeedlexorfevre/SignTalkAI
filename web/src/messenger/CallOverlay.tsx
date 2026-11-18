@@ -23,6 +23,8 @@ import { messenger, useMessenger } from './store';
 import { Avatar } from './ChatsPage';
 import { DotField } from '../components/brand/DotField';
 import { duration, endText } from './format';
+import { library, useGestureLibrary } from '../gestures/library';
+import { isReady } from '../ml/prototypes';
 import {
   LiveTranslator,
   type TranslatorEvent,
@@ -139,8 +141,12 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
   // Settings for this call
   const [panel, setPanel] = useState(false);
   const [translateOn, setTranslateOn] = useState(true);
-  const [model, setModel] = useState<TranslatorModel>('krsl');
+  const [model, setModel] = useState<TranslatorModel>('personal');
   const [language, setLanguage] = useState<Locale>(lang);
+  const gestureLib = useGestureLibrary();
+  const myGestures = gestureLib.gestures.filter(
+    (g) => g.setId === gestureLib.activeSetId && isReady(g),
+  );
   const [autoSend, setAutoSend] = useState(true);
   const [speechOn, setSpeechOn] = useState(false);
   const [ttsOn, setTtsOn] = useState(false);
@@ -211,7 +217,7 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
         );
       }
     },
-    [peer.id, t],
+    [peer.id, t, setNotice],
   );
 
   // --- sign translation on this device ---------------------------------------------------
@@ -220,9 +226,6 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
     autoSendRef.current = autoSend;
   }, [autoSend]);
   const translator = useRef<LiveTranslator | null>(null);
-  useEffect(() => {
-    translator.current?.setLanguage(language);
-  }, [language]);
   useEffect(() => {
     const video = selfRef.current;
     if (!translateOn || !hasLocalVideo || !live || !video) return;
@@ -254,7 +257,7 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
         case 'result': {
           setSigning(false);
           const repeat =
-            lastSent.current.text === event.text && Date.now() - lastSent.current.at < 1500;
+            lastSent.current.text === event.text && Date.now() - lastSent.current.at < 600;
           const send = event.accepted && autoSendRef.current && !!event.text && !repeat;
           setLastSign({
             text: event.text,
@@ -275,7 +278,7 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
         }
       }
     };
-    const instance = new LiveTranslator(video, model, language, onEvent);
+    const instance = new LiveTranslator(video, model, onEvent);
     translator.current = instance;
     void instance.start();
     return () => {
@@ -286,7 +289,7 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
       setSigning(false);
       setSpelling('');
     };
-    // language is applied with setLanguage(); restarting would reload the models.
+    // selfRef is a stable ref; restarting on it would reload the models.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translateOn, hasLocalVideo, live, model, sendText, t]);
 
@@ -665,30 +668,40 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
           </label>
           <div className="panel-fields">
             <label>
-              <span>{t('Модель', 'Модель')}</span>
+              <span>{t('Что распознавать', 'Нені тану')}</span>
               <select
                 value={model}
                 onChange={(e) => {
                   setModel(e.target.value as TranslatorModel);
                 }}
               >
-                <option value="krsl">
-                  {t('KRSL · 10 жестов (Казахстан)', 'KRSL · 10 ым (Қазақстан)')}
-                </option>
+                <option value="personal">{t('Мои жесты', 'Менің ымдарым')}</option>
                 <option value="bukva">
-                  {t('Дактиль РЖЯ · алфавит (33 буквы)', 'РЖЯ дактилі · әліпби (33 әріп)')}
-                </option>
-                <option value="asl">
-                  {t(
-                    'KRSL (тестовая подпись · модель ASL, 250 жестов)',
-                    'KRSL (сынақ белгісі · ASL моделі, 250 ым)',
-                  )}
+                  {t('Русский алфавит (33 буквы)', 'Орыс әліпбиі (33 әріп)')}
                 </option>
               </select>
             </label>
+            {model === 'personal' && gestureLib.sets.length ? (
+              <label>
+                <span>{t('Набор жестов', 'Ым жинағы')}</span>
+                <select
+                  value={gestureLib.activeSetId ?? ''}
+                  onChange={(e) => {
+                    library.setActiveSet(e.target.value);
+                  }}
+                >
+                  {gestureLib.sets.map((set) => (
+                    <option key={set.id} value={set.id}>
+                      {set.name} (
+                      {gestureLib.gestures.filter((g) => g.setId === set.id && isReady(g)).length})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <label>
               <span>
-                <Languages size={13} aria-hidden /> {t('Язык текста', 'Мәтін тілі')}
+                <Languages size={13} aria-hidden /> {t('Язык речи', 'Сөйлеу тілі')}
               </span>
               <select
                 value={language}
@@ -788,14 +801,14 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
                     'Показывайте слово по буквам, каждую около секунды. Опустите руку на 2 секунды — слово уйдёт собеседнику. Буквы видны ему сразу, пока вы показываете. Казахские Ә, Ғ, Қ, Ң, Ө, Ұ, Ү, Һ, І модель не знает.',
                     'Сөзді әріппен көрсетіңіз, әрқайсысын шамамен бір секунд. Қолды 2 секундқа түсірсеңіз — сөз әңгімелесушіге барады. Әріптерді ол бірден көреді. Қазақтың Ә, Ғ, Қ, Ң, Ө, Ұ, Ү, Һ, І әріптерін модель білмейді.',
                   )
-                : model === 'krsl'
+                : myGestures.length
                   ? t(
-                      'Покажите один жест, затем опустите руки — перевод уйдёт собеседнику. Словарь: где, как, какой, когда, который, кто, куда, сколько, что, зачем.',
-                      'Бір ым көрсетіп, қолды түсіріңіз — аударма әңгімелесушіге барады. Сөздік: қай жерде, қалай, қандай, қашан, қайсы, кім, қайда, қанша, не, не үшін.',
+                      `Покажите один свой жест, затем опустите руки — его значение уйдёт собеседнику. Ваши жесты: ${myGestures.map((g) => g.name).join(', ')}.`,
+                      `Өз ымыңызды көрсетіп, қолды түсіріңіз — мағынасы әңгімелесушіге барады. Ымдарыңыз: ${myGestures.map((g) => g.name).join(', ')}.`,
                     )
                   : t(
-                      'Покажите жест ASL, затем опустите руки.',
-                      'ASL ымын көрсетіп, қолды түсіріңіз.',
+                      'В выбранном наборе пока нет готовых жестов. Добавьте их в разделе «Мои жесты» — они сразу появятся здесь.',
+                      'Таңдалған жинақта әзір дайын ым жоқ. Оларды «Менің ымдарым» бөлімінде қосыңыз — олар осында бірден пайда болады.',
                     )}
             </p>
           )}

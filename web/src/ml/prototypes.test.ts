@@ -60,7 +60,7 @@ describe('prototypes', () => {
     let g = gesture('g', []);
     for (let i = 0; i < MAX_TAKES + 2; i++) g = addTake(g, unit(1, i));
     expect(g.takes).toHaveLength(MAX_TAKES);
-    expect(MAX_GESTURES).toBe(8);
+    expect(MAX_GESTURES).toBe(100);
   });
 
   it('computes cosine for unit and non-unit vectors', () => {

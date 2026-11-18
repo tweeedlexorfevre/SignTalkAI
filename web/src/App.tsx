@@ -4,40 +4,21 @@ import { LiveHand } from './components/brand/LiveHand';
 import { initials } from './messenger/format';
 import type { Session } from './app/session';
 import { setLocale, useLocale, type Locale } from './locale';
-import { MODEL_OPTIONS } from './cloud/client';
 import { conversation } from './conversation/session';
 import { BuildNotice } from './app/BuildNotice';
 import { version } from '../package.json';
-import krslLabels from '../public/models/krsl/labels.json';
 import { useMessenger } from './messenger/store';
 import { calls } from './messenger/call';
 const AuthPage = lazy(() => import('./messenger/AuthPage'));
 const ChatsPage = lazy(() => import('./messenger/ChatsPage'));
 const ProfilePage = lazy(() => import('./messenger/ProfilePage'));
 const CallOverlay = lazy(() => import('./messenger/CallOverlay'));
-const ConversationPage = lazy(() => import('./conversation/ConversationPage'));
 const RecognitionPage = lazy(() => import('./pages/RecognitionPage'));
-const DatasetPanel = lazy(() =>
-  import('./components/DatasetPanel').then((m) => ({ default: m.DatasetPanel })),
-);
 const HelpPage = lazy(() => import('./pages/HelpPage'));
 const GesturePage = lazy(() => import('./pages/GesturePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const NativePanel = lazy(() =>
-  import('./components/NativePanel').then((m) => ({ default: m.NativePanel })),
-);
-type Page =
-  'chats' | 'profile' | 'talk' | 'recognition' | 'gestures' | 'dataset' | 'help' | 'settings';
-const PAGES: readonly Page[] = [
-  'chats',
-  'profile',
-  'talk',
-  'recognition',
-  'gestures',
-  'dataset',
-  'help',
-  'settings',
-];
+type Page = 'chats' | 'profile' | 'recognition' | 'gestures' | 'help' | 'settings';
+const PAGES: readonly Page[] = ['chats', 'profile', 'recognition', 'gestures', 'help', 'settings'];
 function currentPage(): Page {
   const hash = location.hash.slice(1);
   return (PAGES as readonly string[]).includes(hash) ? (hash as Page) : 'chats';
@@ -56,15 +37,8 @@ export function App({ session }: { session: Session }) {
   const [page, setPage] = useState<Page>(currentPage);
   const [language, setLanguage] = useState<Locale>(lang);
   const changeLanguage = (value: Locale) => {
-    const draft = conversation.getSnapshot().draft;
-    const label = krslLabels.find((item) => item.ru === draft || item.kk === draft);
-    if (label) conversation.setDraft(label[value]);
     setLanguage(value);
   };
-  const [model, setModel] = useState(() => {
-    const value = stored('signtalk.cloudModel', 'gemini-3.5-flash-lite');
-    return MODEL_OPTIONS.includes(value) ? value : 'gemini-3.5-flash-lite';
-  });
   const [large, setLarge] = useState(() => stored('signtalk.large', 'false') === 'true');
   const [contrast, setContrast] = useState(() => stored('signtalk.contrast', 'false') === 'true');
   useEffect(() => {
@@ -94,18 +68,17 @@ export function App({ session }: { session: Session }) {
   );
   useEffect(() => {
     try {
-      localStorage.setItem('signtalk.cloudModel', model);
       localStorage.setItem('signtalk.large', String(large));
       localStorage.setItem('signtalk.contrast', String(contrast));
     } catch {
       /* private storage */
     }
-  }, [model, large, contrast]);
+  }, [large, contrast]);
   useEffect(() => {
     session.stopCamera();
     session.stopReplay();
-    if (page !== 'recognition') session.setRecognitionEnabled(false);
-    if (page === 'dataset' || page === 'gestures') session.warmUp();
+    if (page !== 'recognition' && page !== 'gestures') session.setRecognitionEnabled(false);
+    if (page === 'gestures') session.warmUp();
     return () => {
       session.stopCamera();
       session.stopReplay();
@@ -118,17 +91,15 @@ export function App({ session }: { session: Session }) {
   const nav = [
     { id: 'chats', icon: MessageCircle, title: t('Чаты', 'Чаттар') },
     { id: 'recognition', icon: Camera, title: t('Распознавание', 'Тану') },
-    { id: 'gestures', icon: BookOpen, title: t('Словарь', 'Сөздік') },
+    { id: 'gestures', icon: BookOpen, title: t('Мои жесты', 'Менің ымдарым') },
     { id: 'help', icon: CircleHelp, title: t('Помощь', 'Көмек') },
   ];
   const sectionIndex = nav.findIndex((item) => item.id === page);
   const titles: Record<Page, string> = {
     chats: t('Чаты и видеозвонки', 'Чаттар және бейнеқоңыраулар'),
     profile: t('Профиль и устройства', 'Профиль және құрылғылар'),
-    talk: t('Ответ собеседника', 'Әңгімелесушінің жауабы'),
-    recognition: t('Распознавание жестов и губ', 'Ымды және ерінді тану'),
-    gestures: t('Словарь и примеры', 'Сөздік және мысалдар'),
-    dataset: t('Сбор примеров', 'Мысал жинау'),
+    recognition: t('Распознавание жестов', 'Ымды тану'),
+    gestures: t('Мои жесты', 'Менің ымдарым'),
     help: t('Для кого и как это работает', 'Кімге арналған және қалай жұмыс істейді'),
     settings: t('Настройки', 'Баптаулар'),
   };
@@ -229,14 +200,6 @@ export function App({ session }: { session: Session }) {
               <span>{t('Жесты → понятный текст', 'Ым → түсінікті мәтін')}</span>
             </p>
             <h1>{titles[page]}</h1>
-            {page === 'talk' ? (
-              <p>
-                {t(
-                  'Пишите сообщения и читайте ответы собеседника.',
-                  'Хабарлама жазыңыз және әңгімелесушінің жауабын оқыңыз.',
-                )}
-              </p>
-            ) : null}
           </div>
           <div className="accessibility-tools">
             <button
@@ -270,42 +233,21 @@ export function App({ session }: { session: Session }) {
             ) : (
               <ProfilePage />
             )
-          ) : page === 'talk' ? (
-            <ConversationPage language={language} setLanguage={changeLanguage} model={model} />
           ) : page === 'recognition' ? (
             <RecognitionPage
               session={session}
               language={language}
               setLanguage={changeLanguage}
-              model={model}
               onPick={pick}
             />
           ) : page === 'gestures' ? (
-            <>
-              <GesturePage />
-              <details className="content-card">
-                <summary>
-                  {t('Проверить KRSL без камеры', 'KRSL моделін камерасыз тексеру')}
-                </summary>
-                <NativePanel
-                  kind="krsl"
-                  session={session}
-                  output={language}
-                  onPick={pick}
-                  samplesOnly
-                />
-              </details>
-            </>
-          ) : page === 'dataset' ? (
-            <DatasetPanel session={session} />
+            <GesturePage session={session} />
           ) : page === 'help' ? (
             <HelpPage />
           ) : (
             <SettingsPage
               language={language}
               setLanguage={changeLanguage}
-              model={model}
-              setModel={setModel}
               large={large}
               setLarge={setLarge}
               contrast={contrast}

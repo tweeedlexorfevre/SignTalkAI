@@ -207,3 +207,86 @@ test('rejects bad sockets and serves unknown API paths as JSON 404', async () =>
   assert.equal((await call('DELETE', '/api/me')).status, 405);
   assert.equal((await fetch(base + '/healthz')).status, 200);
 });
+
+test('personal gestures are stored per account, grouped in sets and shared by its devices', async () => {
+  const reg = await call('POST', '/api/auth/register', { body: { username: 'gulnar', displayName: 'Гульнар', password: 'password-3' } });
+  const token = reg.data.token;
+  const second = (await call('POST', '/api/auth/login', { body: { login: 'gulnar', password: 'password-3' } })).data.token;
+  const other = (await call('POST', '/api/auth/register', { body: { username: 'erlan', displayName: 'Ерлан', password: 'password-4' } })).data.token;
+  const ws = await socket(second);
+  const take = (seed) => Array.from({ length: 128 }, (_, i) => Math.sin(i + seed));
+  const preview = { fps: 30, frames: [Array.from({ length: 98 }, (_, i) => (i % 7 ? i / 100 : null))] };
+
+  assert.equal((await call('GET', '/api/gestures')).status, 401);
+  // Every account starts with the Kazakh and Russian sets.
+  const start = await call('GET', '/api/gestures', { token });
+  assert.deepEqual(start.data.sets.map((x) => x.name), ['Казахский жестовый язык', 'Русский жестовый язык']);
+  const [kz, ru] = start.data.sets.map((x) => x.id);
+
+  assert.equal((await call('POST', '/api/gestures', { token, body: { setId: kz, name: '  ', modelVersion: 'v1' } })).status, 400);
+  const created = await call('POST', '/api/gestures', { token, body: { setId: kz, name: 'Привет', modelVersion: 'v1' } });
+  assert.equal(created.status, 201);
+  assert.equal(created.data.gesture.setId, kz);
+  const id = created.data.gesture.id;
+  // Other devices get the changed gesture itself, not just a "reload" signal.
+  const live = await ws.next('gestures:changed');
+  assert.equal(live.gesture.id, id);
+  assert.equal((await call('POST', '/api/gestures', { token, body: { setId: kz, name: 'привет', modelVersion: 'v1' } })).status, 409);
+  // The same meaning can exist in another set.
+  const ruHello = await call('POST', '/api/gestures', { token, body: { setId: ru, name: 'Привет', modelVersion: 'v1' } });
+  assert.equal(ruHello.status, 201);
+
+  for (let i = 0; i < 5; i++) {
+    const added = await call('POST', `/api/gestures/${id}/takes`, { token, body: { take: take(i), preview: i === 1 ? undefined : preview, modelVersion: 'v1' } });
+    assert.equal(added.status, 201);
+    assert.equal(added.data.gesture.takes.length, i + 1);
+  }
+  assert.equal((await call('POST', `/api/gestures/${id}/takes`, { token, body: { take: take(9), modelVersion: 'v1' } })).status, 409);
+  const bad = await call('POST', `/api/gestures/${ruHello.data.gesture.id}/takes`, { token, body: { take: take(1), preview: { fps: 30, frames: [[1, 2]] }, modelVersion: 'v1' } });
+  assert.equal(bad.status, 400);
+
+  // Look through the takes: previews line up with takes; delete one bad take.
+  const listed = (await call('GET', '/api/gestures', { token: second })).data.gestures.find((x) => x.id === id);
+  assert.equal(listed.takes.length, 5);
+  assert.equal(listed.previews, undefined); // the list leaves previews out…
+  assert.deepEqual(listed.durations.map((d) => d === null), [false, true, false, false, false]);
+  let g = (await call('GET', `/api/gestures/${id}`, { token: second })).data.gesture; // …one gesture has them
+  assert.equal(g.takes.length, 5);
+  assert.equal(g.previews.length, 5);
+  assert.equal(g.previews[1], null);
+  assert.equal(g.previews[0].frames[0][0], null);
+  const removedTake = await call('DELETE', `/api/gestures/${id}/takes/1`, { token });
+  assert.equal(removedTake.data.gesture.takes.length, 4);
+  assert.ok(removedTake.data.gesture.previews.every((p) => p !== null));
+  assert.equal((await call('DELETE', `/api/gestures/${id}/takes/9`, { token })).status, 404);
+  assert.equal((await call('GET', '/api/gestures', { token: other })).data.gestures.length, 0);
+  assert.equal((await call('DELETE', `/api/gestures/${id}`, { token: other })).status, 404);
+
+  // Rename, move between sets (name clash refused), re-record from scratch.
+  assert.equal((await call('PATCH', `/api/gestures/${id}`, { token, body: { setId: ru } })).status, 409);
+  const moved = await call('PATCH', `/api/gestures/${id}`, { token, body: { setId: ru, name: 'Сәлем' } });
+  assert.equal(moved.data.gesture.setId, ru);
+  assert.equal(moved.data.gesture.name, 'Сәлем');
+  assert.equal(moved.data.gesture.takes.length, 4);
+  g = (await call('DELETE', `/api/gestures/${id}/takes`, { token })).data.gesture;
+  assert.equal(g.takes.length, 0);
+
+  // Sets: create, rename, refuse duplicates, delete with their gestures, keep the last one.
+  const mine = await call('POST', '/api/gesture-sets', { token, body: { name: 'Колледж' } });
+  assert.equal(mine.status, 201);
+  assert.equal((await call('POST', '/api/gesture-sets', { token, body: { name: 'колледж' } })).status, 409);
+  assert.equal((await call('PATCH', `/api/gesture-sets/${mine.data.set.id}`, { token, body: { name: 'Учёба' } })).data.set.name, 'Учёба');
+  await call('POST', '/api/gestures', { token, body: { setId: mine.data.set.id, name: 'Урок', modelVersion: 'v1', takes: [take(1), take(2), take(3)] } });
+  assert.equal((await call('DELETE', `/api/gesture-sets/${mine.data.set.id}`, { token })).status, 200);
+  const after = (await call('GET', '/api/gestures', { token })).data;
+  assert.equal(after.sets.length, 2);
+  assert.ok(!after.gestures.some((x) => x.name === 'Урок'));
+  assert.equal((await call('DELETE', `/api/gesture-sets/${kz}`, { token })).status, 200);
+  assert.equal((await call('DELETE', `/api/gesture-sets/${ru}`, { token })).status, 409);
+
+  assert.equal((await call('DELETE', '/api/gestures', { token })).data.removed, 2);
+  assert.equal((await call('GET', '/api/gestures', { token })).data.gestures.length, 0);
+  ws.close();
+  await once(ws.ws, 'close');
+  await new Promise((r) => setTimeout(r, 50));
+});

@@ -21,8 +21,8 @@ export function ResultEditor({ language }: { language: Locale }) {
         value={draft}
         lang={language}
         placeholder={t(
-          'Выберите результат выше. Здесь его можно исправить.',
-          'Жоғарыдағы нәтижені таңдаңыз. Оны осында түзетуге болады.',
+          'Распознанные жесты собираются здесь. Текст можно исправить.',
+          'Танылған ымдар осында жиналады. Мәтінді түзетуге болады.',
         )}
         onChange={(e) => {
           conversation.setDraft(e.target.value);
@@ -76,23 +76,20 @@ export function ResultEditor({ language }: { language: Locale }) {
           <Copy size={17} aria-hidden />
           {t('Копировать', 'Көшіру')}
         </Button>
+        <Button
+          disabled={!draft}
+          onClick={() => {
+            conversation.setDraft('');
+          }}
+        >
+          <X size={17} aria-hidden />
+          {t('Очистить', 'Тазалау')}
+        </Button>
         <button className="text-button" onClick={speech.stopVoice}>
           {t('Стоп звук', 'Дыбысты тоқтату')}
         </button>
       </div>
       <p role="status">{speech.notice}</p>
-      <details>
-        <summary>{t('Ответ собеседника', 'Әңгімелесушінің жауабы')}</summary>
-        <p>
-          {t(
-            'При необходимости откройте текстовый ответ и субтитры речи.',
-            'Қажет болса, мәтіндік жауап пен сөйлеу субтитрін ашыңыз.',
-          )}
-        </p>
-        <a href="#talk" className="text-link">
-          {t('Открыть ответ и субтитры', 'Жауап пен субтитрді ашу')} →
-        </a>
-      </details>
       <dialog
         ref={display}
         className="large-message presentation"

@@ -1,5 +1,5 @@
 // SignTalk server: the built web app, the messenger API, the WebSocket hub for
-// chat and video-call signalling, and the optional Gemini proxy. One process,
+// chat and video-call signalling. One process,
 // one port, so it runs as a single Render web service.
 //
 //   node server/app.mjs            (PORT, HOST, DATABASE_URL or DATABASE_PATH from the environment)
@@ -14,8 +14,6 @@ import { openDatabase } from './db.mjs';
 import { openPostgres } from './db-pg.mjs';
 import { Hub } from './realtime.mjs';
 import { createApi, sendJson } from './api.mjs';
-import { createCloudHandler } from './cloud.mjs';
-import { createLipreadHandler } from './lipread.mjs';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -55,13 +53,6 @@ export function createApp({
   const hub = new Hub({ store, now, ...(ringTimeoutMs ? { ringTimeoutMs } : {}) });
   const trustProxy = env.TRUST_PROXY === '1' || !!env.RENDER;
   const api = createApi({ store, hub, now, env, trustProxy, ...(authLimit ? { authLimit } : {}) });
-  const cloud = createCloudHandler({
-    key: env.GEMINI_API_KEY,
-    model: env.GEMINI_MODEL ?? 'gemini-4-argon',
-    port,
-    sameOrigin: trustProxy || env.PUBLIC_DEPLOY === '1',
-  });
-  const lipread = createLipreadHandler({ url: env.LIPREAD_URL ?? 'http://127.0.0.1:5340' });
   const root = resolve(staticRoot);
 
   async function serveStatic(req, res) {
@@ -106,12 +97,6 @@ export function createApp({
     try {
       const path = new URL(req.url ?? '/', 'http://localhost').pathname;
       if (path === '/healthz') return sendJson(res, 200, { ok: true });
-      if (path.startsWith('/api/cloud/')) {
-        if (await cloud(req, res)) return;
-      }
-      if (path.startsWith('/api/lipread/')) {
-        if (await lipread(req, res)) return;
-      }
       if (await api(req, res)) return;
       await serveStatic(req, res);
     } catch (error) {

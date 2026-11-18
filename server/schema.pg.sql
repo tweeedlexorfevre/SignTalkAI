@@ -65,18 +65,50 @@ CREATE TABLE IF NOT EXISTS calls (
 CREATE INDEX IF NOT EXISTS calls_caller ON calls(caller_id);
 CREATE INDEX IF NOT EXISTS calls_callee ON calls(callee_id);
 
+-- Gesture sets ("dictionaries") of a user, e.g. Kazakh signs and Russian signs.
+CREATE TABLE IF NOT EXISTS gesture_sets (
+  id         text   PRIMARY KEY,
+  owner_id   bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       text   NOT NULL,
+  created_at bigint NOT NULL,
+  updated_at bigint NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS gesture_sets_owner_name ON gesture_sets (owner_id, lower(name));
+
+-- Personal gestures taught by a user: a name (the meaning) and 3–5 recorded takes.
+-- A take is the sign model's embedding of one attempt (numbers only, never video), stored
+-- as a JSON array of arrays. previews[i] is a small hand/arm skeleton animation of take i
+-- (landmark coordinates, never video), so the user can look through the recorded takes.
+-- model_version is the model that produced the embeddings.
+CREATE TABLE IF NOT EXISTS gestures (
+  id            text   PRIMARY KEY,
+  owner_id      bigint NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          text   NOT NULL,
+  model_version text   NOT NULL,
+  takes         jsonb  NOT NULL DEFAULT '[]'::jsonb,
+  created_at    bigint NOT NULL,
+  updated_at    bigint NOT NULL
+);
+ALTER TABLE gestures ADD COLUMN IF NOT EXISTS set_id text REFERENCES gesture_sets(id) ON DELETE CASCADE;
+ALTER TABLE gestures ADD COLUMN IF NOT EXISTS previews jsonb NOT NULL DEFAULT '[]'::jsonb;
+DROP INDEX IF EXISTS gestures_owner_name;
+CREATE UNIQUE INDEX IF NOT EXISTS gestures_set_name ON gestures (set_id, lower(name));
+CREATE INDEX IF NOT EXISTS gestures_owner ON gestures (owner_id);
+
 -- Lock the tables away from the Supabase REST/GraphQL API (anon and signed-in API users).
 ALTER TABLE users    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calls    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gestures ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gesture_sets ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
-    REVOKE ALL ON users, sessions, contacts, messages, calls FROM anon;
+    REVOKE ALL ON users, sessions, contacts, messages, calls, gestures, gesture_sets FROM anon;
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
-    REVOKE ALL ON users, sessions, contacts, messages, calls FROM authenticated;
+    REVOKE ALL ON users, sessions, contacts, messages, calls, gestures, gesture_sets FROM authenticated;
   END IF;
 END $$;

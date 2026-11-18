@@ -3,7 +3,16 @@ import { ArrowRight, Eye, EyeOff, MessageCircle, Video, Smartphone } from 'lucid
 import { LiveHand } from '../components/brand/LiveHand';
 import { DotField } from '../components/brand/DotField';
 import { TypeText } from '../components/brand/TypeText';
-import krslLabels from '../../public/models/krsl/labels.json';
+
+/** Example meanings for the decorative readout (the user's own gestures carry their own names). */
+const krslLabels = [
+  { ru: 'Привет', kk: 'Сәлем' },
+  { ru: 'Спасибо', kk: 'Рақмет' },
+  { ru: 'Можно', kk: 'Болады' },
+  { ru: 'Нельзя', kk: 'Болмайды' },
+  { ru: 'Надо', kk: 'Керек' },
+  { ru: 'Не надо', kk: 'Керек емес' },
+];
 import { useLocale } from '../locale';
 import { ApiError, errorText } from './api';
 import { messenger } from './store';

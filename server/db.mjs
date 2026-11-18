@@ -15,10 +15,16 @@ export function openDatabase(path) {
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  // Columns added after the first release of the gestures table.
+  const columns = new Set(db.prepare('PRAGMA table_info(gestures)').all().map((c) => c.name));
+  if (!columns.has('set_id'))
+    db.exec('ALTER TABLE gestures ADD COLUMN set_id TEXT REFERENCES gesture_sets(id) ON DELETE CASCADE');
+  if (!columns.has('previews')) db.exec("ALTER TABLE gestures ADD COLUMN previews TEXT NOT NULL DEFAULT '[]'");
   return new Store(db);
 }
 
 const userColumns = 'id, public_id, username, display_name, created_at';
+const gestureColumns = 'id, set_id, name, model_version, takes, previews, created_at, updated_at';
 
 /** Public view of a user row. Never contains the password hash or internal id. */
 export function publicUser(row) {
@@ -105,6 +111,26 @@ export class Store {
       ),
       answerCall: q("UPDATE calls SET status = 'active', answered_at = ? WHERE id = ?"),
       finishCall: q('UPDATE calls SET status = ?, ended_at = ? WHERE id = ?'),
+
+      setsOf: q('SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = ? ORDER BY created_at, id'),
+      setById: q('SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = ? AND id = ?'),
+      insertSet: q('INSERT INTO gesture_sets (id, owner_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'),
+      renameSet: q('UPDATE gesture_sets SET name = ?, updated_at = ? WHERE owner_id = ? AND id = ?'),
+      deleteSetGestures: q('DELETE FROM gestures WHERE owner_id = ? AND set_id = ?'),
+      deleteSet: q('DELETE FROM gesture_sets WHERE owner_id = ? AND id = ?'),
+      adoptOrphans: q('UPDATE gestures SET set_id = ? WHERE owner_id = ? AND set_id IS NULL'),
+
+      gestureNames: q('SELECT id, set_id, name FROM gestures WHERE owner_id = ?'),
+      gesturesOf: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? ORDER BY created_at, id`),
+      gestureById: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? AND id = ?`),
+      insertGesture: q(
+        'INSERT INTO gestures (id, owner_id, set_id, name, model_version, takes, previews, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ),
+      updateGesture: q(
+        'UPDATE gestures SET set_id = ?, name = ?, model_version = ?, takes = ?, previews = ?, updated_at = ? WHERE owner_id = ? AND id = ?',
+      ),
+      deleteGesture: q('DELETE FROM gestures WHERE owner_id = ? AND id = ?'),
+      clearGestures: q('DELETE FROM gestures WHERE owner_id = ?'),
     };
   }
 
@@ -245,5 +271,57 @@ export class Store {
   }
   finishCall(id, status, now) {
     this.s.finishCall.run(status, now, id);
+  }
+
+  // --- gesture sets and personal gestures ---------------------------------
+  setsOf(ownerId) {
+    return this.s.setsOf.all(ownerId);
+  }
+  setById(ownerId, id) {
+    return this.s.setById.get(ownerId, id);
+  }
+  insertSet({ id, ownerId, name, now }) {
+    this.s.insertSet.run(id, ownerId, name, now, now);
+    return this.setById(ownerId, id);
+  }
+  renameSet(ownerId, id, name, now) {
+    this.s.renameSet.run(name, now, ownerId, id);
+    return this.setById(ownerId, id);
+  }
+  deleteSet(ownerId, id) {
+    // Foreign keys cascade too; deleting explicitly also covers databases opened without them.
+    this.s.deleteSetGestures.run(ownerId, id);
+    return this.s.deleteSet.run(ownerId, id).changes > 0;
+  }
+  adoptOrphans(ownerId, setId) {
+    return Number(this.s.adoptOrphans.run(setId, ownerId).changes);
+  }
+
+  /** Rows look like the PostgreSQL ones: JSON columns are parsed back into arrays. */
+  gestureRow(row) {
+    return row ? { ...row, takes: JSON.parse(row.takes), previews: JSON.parse(row.previews ?? '[]') } : undefined;
+  }
+  gestureNames(ownerId) {
+    return this.s.gestureNames.all(ownerId);
+  }
+  gesturesOf(ownerId) {
+    return this.s.gesturesOf.all(ownerId).map((row) => this.gestureRow(row));
+  }
+  gestureById(ownerId, id) {
+    return this.gestureRow(this.s.gestureById.get(ownerId, id));
+  }
+  insertGesture({ id, ownerId, setId, name, modelVersion, takes, previews, now }) {
+    this.s.insertGesture.run(id, ownerId, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, now);
+    return this.gestureById(ownerId, id);
+  }
+  updateGesture(ownerId, id, { setId, name, modelVersion, takes, previews, now }) {
+    this.s.updateGesture.run(setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, ownerId, id);
+    return this.gestureById(ownerId, id);
+  }
+  deleteGesture(ownerId, id) {
+    return this.s.deleteGesture.run(ownerId, id).changes > 0;
+  }
+  clearGestures(ownerId, setId) {
+    return Number((setId ? this.s.deleteSetGestures.run(ownerId, setId) : this.s.clearGestures.run(ownerId)).changes);
   }
 }

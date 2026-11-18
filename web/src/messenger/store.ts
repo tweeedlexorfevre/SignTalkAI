@@ -112,6 +112,11 @@ export class Messenger {
     return () => this.eventListeners.delete(listener);
   }
 
+  /** Signed-in request to the REST API (used by the personal gesture library). */
+  authed<T>(method: string, path: string, body?: unknown): Promise<T> {
+    return this.api<T>(method, path, body);
+  }
+
   private api<T>(method: string, path: string, body?: unknown): Promise<T> {
     return request<T>(
       method,
@@ -508,7 +513,7 @@ export class Messenger {
         this.signedOut();
         break;
       default:
-        if (event.type.startsWith('call:')) this.emit(event);
+        if (event.type.startsWith('call:') || event.type === 'gestures:changed') this.emit(event);
     }
   }
 }

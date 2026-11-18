@@ -37,82 +37,22 @@ export function RecognitionSettings() {
     <section className="content-card recognition-settings">
       <h2>{t('Распознавание жестов', 'Ымды тану')}</h2>
       <Choice
-        label={t('Жестовый язык по умолчанию', 'Әдепкі ым тілі')}
+        label={t('Что распознавать по умолчанию', 'Әдепкі бойынша нені тану')}
         value={p.signLanguage}
         onChange={(v) => {
           setRecognitionPreferences({ signLanguage: v as typeof p.signLanguage });
         }}
       >
-        <option value="krsl">{t('Казахстан · KRSL', 'Қазақстан · KRSL')}</option>
-        <option value="rsl">{t('Русский жестовый · РЖЯ', 'Орыс ым тілі · РЖЯ')}</option>
-        <option value="bukva">{t('Дактиль РЖЯ · алфавит', 'РЖЯ дактилі · әліпби')}</option>
-        <option value="asl">{t('ASL', 'ASL')}</option>
+        <option value="personal">{t('Свои жесты', 'Өз ымдарым')}</option>
+        <option value="bukva">{t('Русский алфавит (дактиль)', 'Орыс әліпбиі (дактиль)')}</option>
       </Choice>
-      <Choice
-        label={t('Способ распознавания по умолчанию', 'Әдепкі тану тәсілі')}
-        value={p.engine}
-        onChange={(v) => {
-          setRecognitionPreferences({ engine: v as typeof p.engine });
-        }}
-      >
-        <option value="cloud">{t('Облачный ИИ', 'Бұлттық ЖИ')}</option>
-        <option value="local">{t('На устройстве', 'Құрылғыда')}</option>
-      </Choice>
-      <Choice
-        label={t('Словарь облака для KRSL', 'KRSL үшін бұлт сөздігі')}
-        value={p.vocabulary}
-        onChange={(v) => {
-          setRecognitionPreferences({ vocabulary: v as typeof p.vocabulary });
-        }}
-      >
-        <option value="krsl10">{t('10 жестов · как в примерах', 'Мысалдардағы 10 ым')}</option>
-        <option value="free">{t('Свободный · эксперимент', 'Еркін · тәжірибе')}</option>
-      </Choice>
-      <p>
-        {t(
-          'Словарь задаёт допустимые названия ответа, но не обучает модель движениям. Для РЖЯ и ASL облако работает в свободном режиме.',
-          'Сөздік жауаптың рұқсат етілген атауларын белгілейді, бірақ модельге қимылды үйретпейді. РЖЯ және ASL үшін бұлт еркін режимде жұмыс істейді.',
-        )}
-      </p>
-      <Choice
-        label={t('Время на подготовку', 'Дайындық уақыты')}
-        value={p.countdown}
-        onChange={(v) => {
-          setRecognitionPreferences({ countdown: Number(v) as typeof p.countdown });
-        }}
-      >
-        {[1, 3, 5].map((n) => (
-          <option key={n} value={n}>
-            {n} {t('сек.', 'сек.')}
-          </option>
-        ))}
-      </Choice>
-      <Choice
-        label={t('Длительность облачной записи', 'Бұлтқа арналған жазба ұзақтығы')}
-        value={p.cloudSeconds}
-        onChange={(v) => {
-          setRecognitionPreferences({ cloudSeconds: Number(v) as typeof p.cloudSeconds });
-        }}
-      >
-        {[3, 5, 8].map((n) => (
-          <option key={n} value={n}>
-            {n} {t('сек.', 'сек.')}
-          </option>
-        ))}
-      </Choice>
-      <p>
-        {t(
-          'Отсчёт относится к ручной записи. ASL на устройстве выделяет жест автоматически; локальные модели используют свою фиксированную длину записи.',
-          'Кері санау қолмен жазуға арналған. Құрылғыдағы ASL ымды автоматты бөледі; жергілікті модельдер жазбаның өз тұрақты ұзақтығын қолданады.',
-        )}
-      </p>
       <label className="setting-row">
         <span>
           <b>{t('Скелет на камере', 'Камерадағы қаңқа')}</b>
           <small>
             {t(
-              'Облако, KRSL и ASL на устройстве. Локальная РЖЯ работает с видео. На точность облака не влияет.',
-              'Бұлт, құрылғыдағы KRSL және ASL. Жергілікті РЖЯ бейнемен жұмыс істейді. Бұлт дәлдігіне әсер етпейді.',
+              'Точки рук и тела поверх видео при распознавании своих жестов.',
+              'Өз ымдарыңызды танығанда бейне үстіндегі қол мен дене нүктелері.',
             )}
           </small>
         </span>

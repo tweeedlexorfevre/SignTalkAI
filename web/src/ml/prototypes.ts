@@ -10,7 +10,7 @@
 
 export const MIN_TAKES = 3;
 export const MAX_TAKES = 5;
-export const MAX_GESTURES = 8;
+export const MAX_GESTURES = 100;
 export const MAX_NAME_LENGTH = 40;
 
 export interface Gesture {

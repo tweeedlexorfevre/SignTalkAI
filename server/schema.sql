@@ -57,3 +57,28 @@ CREATE TABLE IF NOT EXISTS calls (
 );
 CREATE INDEX IF NOT EXISTS calls_caller ON calls(caller_id);
 CREATE INDEX IF NOT EXISTS calls_callee ON calls(callee_id);
+
+-- Gesture sets ("dictionaries") of a user, e.g. Kazakh signs and Russian signs.
+CREATE TABLE IF NOT EXISTS gesture_sets (
+  id         TEXT    PRIMARY KEY,
+  owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       TEXT    NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gesture_sets_owner ON gesture_sets(owner_id);
+
+-- Personal gestures taught by a user: a name (the meaning) and 3–5 recorded takes
+-- (sign-model embeddings as a JSON array of arrays; numbers only, never video).
+-- previews[i] is a small skeleton animation of take i. set_id and previews are added
+-- in db.mjs for databases created before they existed.
+CREATE TABLE IF NOT EXISTS gestures (
+  id            TEXT    PRIMARY KEY,
+  owner_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name          TEXT    NOT NULL,
+  model_version TEXT    NOT NULL,
+  takes         TEXT    NOT NULL DEFAULT '[]',
+  created_at    INTEGER NOT NULL,
+  updated_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gestures_owner ON gestures(owner_id);

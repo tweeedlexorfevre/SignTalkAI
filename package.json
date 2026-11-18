@@ -12,9 +12,7 @@
     "build": "npm --prefix web ci && npm --prefix web run build",
     "start": "node server/app.mjs",
     "dev": "npm --prefix web run dev",
-    "test": "node --test server/*.test.mjs",
-    "lipread": "node tools/lipread.mjs",
-    "lipread:setup": "sh lipread/setup.sh"
+    "test": "node --test server/*.test.mjs"
   },
   "dependencies": {
     "pg": "8.16.3",

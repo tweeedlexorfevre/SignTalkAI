@@ -1,4 +1,6 @@
 // REST API for accounts, devices, contacts and messages. Auth: "Authorization: Bearer <token>".
+import { randomUUID } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { publicUser } from './db.mjs';
 import {
   burnPasswordCheck,
@@ -24,25 +26,143 @@ export class HttpError extends Error {
 
 const MESSAGE_KINDS = new Set(['text', 'sign', 'speech']);
 const MAX_BODY = 16 * 1024;
+/** Personal gestures: limits shared with the web app (web/src/ml/prototypes.ts). */
+/** Per set. Practically unlimited; the list is sent compressed and without previews. */
+export const MAX_GESTURES = 5000;
+export const MAX_SETS = 100;
+/** Sets every account starts with. */
+export const DEFAULT_SETS = ['Казахский жестовый язык', 'Русский жестовый язык'];
+/** Preview layout: 21 left-hand + 21 right-hand + 7 upper-body points, (x, y) each. */
+export const PREVIEW_VALUES = (21 + 21 + 7) * 2;
+const MAX_PREVIEW_FRAMES = 24;
+export const MAX_TAKES = 5;
+const MAX_GESTURE_NAME = 40;
+const MIN_EMBEDDING = 8;
+const MAX_EMBEDDING = 1024;
+const GESTURE_BODY = 512 * 1024;
 const TOUCH_EVERY_MS = 60_000;
 
+function gestureName(value, field = 'name') {
+  const name = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  if (!name || [...name].length > MAX_GESTURE_NAME) throw new HttpError(400, 'invalid_input', { [field]: 'invalid_name' });
+  return name;
+}
+
+function modelVersionOf(value) {
+  if (typeof value !== 'string' || !/^[\w.:-]{1,64}$/.test(value)) throw new HttpError(400, 'invalid_input', { modelVersion: 'invalid' });
+  return value;
+}
+
+/** One take: a finite number vector of a plausible embedding size, rounded to keep rows small. */
+function takeOf(value, dim) {
+  if (
+    !Array.isArray(value) ||
+    value.length < MIN_EMBEDDING ||
+    value.length > MAX_EMBEDDING ||
+    (dim !== undefined && value.length !== dim) ||
+    !value.every((x) => typeof x === 'number' && Number.isFinite(x))
+  )
+    throw new HttpError(400, 'invalid_input', { take: 'invalid_take' });
+  return value.map((x) => Math.round(x * 1e6) / 1e6);
+}
+
+/**
+ * Skeleton preview of one take: { fps, frames }, each frame PREVIEW_POINTS (x, y) pairs
+ * (null where a point was not seen). Optional: a take without a preview stores null.
+ */
+function previewOf(value) {
+  if (value === undefined || value === null) return null;
+  const ok =
+    typeof value === 'object' &&
+    typeof value.fps === 'number' &&
+    value.fps > 0 &&
+    value.fps <= 120 &&
+    Array.isArray(value.frames) &&
+    value.frames.length >= 1 &&
+    value.frames.length <= MAX_PREVIEW_FRAMES &&
+    value.frames.every(
+      (f) =>
+        Array.isArray(f) &&
+        f.length === PREVIEW_VALUES &&
+        f.every((x) => x === null || (typeof x === 'number' && Number.isFinite(x) && Math.abs(x) <= 10)),
+    );
+  if (!ok) throw new HttpError(400, 'invalid_input', { preview: 'invalid_preview' });
+  return {
+    fps: Math.round(value.fps * 100) / 100,
+    frames: value.frames.map((f) => f.map((x) => (x === null ? null : Math.round(x * 1000) / 1000))),
+  };
+}
+
+function takesOf(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > MAX_TAKES) throw new HttpError(400, 'invalid_input', { takes: 'invalid_takes' });
+  const dim = Array.isArray(value[0]) ? value[0].length : undefined;
+  return value.map((take) => takeOf(take, dim));
+}
+
+function previewsOf(value, count) {
+  const list = Array.isArray(value) ? value.slice(0, count) : [];
+  return Array.from({ length: count }, (_, i) => previewOf(list[i]));
+}
+
+const parseJson = (v) => (typeof v === 'string' ? JSON.parse(v) : v);
+
+/**
+ * API shape of a gesture row. The list form (used to load every gesture and in
+ * live updates) leaves the skeleton previews out and gives each take's duration
+ * instead; `full` adds the previews, for the gesture being looked at.
+ */
+function gestureJson(row, { full = true } = {}) {
+  const takes = parseJson(row.takes) ?? [];
+  const previews = parseJson(row.previews) ?? [];
+  const aligned = takes.map((_, i) => previews[i] ?? null);
+  return {
+    id: row.id,
+    setId: row.set_id ?? null,
+    name: row.name,
+    modelVersion: row.model_version,
+    takes: full ? takes : takes.map((t) => t.map((x) => Math.round(x * 1e4) / 1e4)),
+    durations: aligned.map((p) => (p && p.fps > 0 ? Math.round((p.frames.length / p.fps) * 1000) : null)),
+    ...(full ? { previews: aligned } : {}),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const listJson = (row) => gestureJson(row, { full: false });
+
+function setJson(row) {
+  return { id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at };
+}
+
+const sameName = (a, b) => a.toLocaleLowerCase('ru') === b.toLocaleLowerCase('ru');
+
 export function sendJson(res, status, data) {
-  res.writeHead(status, {
+  const body = JSON.stringify(data);
+  const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
-  });
-  res.end(JSON.stringify(data));
+  };
+  // Large answers (a big gesture library) are compressed when the client allows it.
+  const accepts = String(res.req?.headers['accept-encoding'] ?? '');
+  if (body.length > 4096 && /\bgzip\b/.test(accepts)) {
+    res.writeHead(status, { ...headers, 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' });
+    res.end(gzipSync(body));
+    return;
+  }
+  res.writeHead(status, headers);
+  res.end(body);
 }
 
-async function readJson(req) {
+async function readJson(req, limit = MAX_BODY) {
   const type = String(req.headers['content-type'] ?? '').split(';')[0].trim();
   if (type !== 'application/json') throw new HttpError(415, 'json_required');
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new HttpError(413, 'body_too_large');
+    if (size > limit) throw new HttpError(413, 'body_too_large');
     chunks.push(chunk);
   }
   try {
@@ -147,6 +267,27 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
     });
     return { token, sessionId, user: publicUser(user) };
   }
+
+  /** The user's sets; the default ones are created on first use, and older gestures moved in. */
+  async function ensureSets(userId) {
+    let sets = await store.setsOf(userId);
+    if (!sets.length) {
+      const t = now();
+      for (const [i, name] of DEFAULT_SETS.entries()) {
+        try {
+          await store.insertSet({ id: randomUUID(), ownerId: userId, name, now: t + i });
+        } catch (error) {
+          if (!isUniqueViolation(error)) throw error; // a parallel request created it
+        }
+      }
+      sets = await store.setsOf(userId);
+    }
+    await store.adoptOrphans(userId, sets[0].id);
+    return sets;
+  }
+
+  /** Every device of this user reloads its gesture library. */
+  const changed = (user, update = {}) => hub.sendToUser(user.id, { type: 'gestures:changed', ...update });
 
   const isUniqueViolation = (error) => error?.code === '23505' || String(error?.message).includes('UNIQUE');
 
@@ -382,11 +523,217 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
         return { ok: true, changed };
       },
     ],
+
+    // --- gesture sets and personal gestures (stored per account, used on every device) ---
+    [
+      'GET',
+      /^\/api\/gesture-sets$/,
+      async (req) => {
+        const { user } = await authenticate(req);
+        return { sets: (await ensureSets(user.id)).map(setJson) };
+      },
+    ],
+    [
+      'POST',
+      /^\/api\/gesture-sets$/,
+      async (req) => {
+        const { user } = await authenticate(req);
+        const name = gestureName((await readJson(req)).name);
+        const sets = await ensureSets(user.id);
+        if (sets.length >= MAX_SETS) throw new HttpError(409, 'too_many_sets');
+        if (sets.some((x) => sameName(x.name, name))) throw new HttpError(409, 'set_exists', { name: 'taken' });
+        const row = await store.insertSet({ id: randomUUID(), ownerId: user.id, name, now: now() });
+        changed(user, { set: setJson(row) });
+        return [201, { set: setJson(row) }];
+      },
+    ],
+    [
+      'PATCH',
+      /^\/api\/gesture-sets\/([0-9a-f-]{36})$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        const name = gestureName((await readJson(req)).name);
+        const sets = await store.setsOf(user.id);
+        if (!sets.some((x) => x.id === id)) throw new HttpError(404, 'set_not_found');
+        if (sets.some((x) => x.id !== id && sameName(x.name, name))) throw new HttpError(409, 'set_exists', { name: 'taken' });
+        const row = await store.renameSet(user.id, id, name, now());
+        changed(user, { set: setJson(row) });
+        return { set: setJson(row) };
+      },
+    ],
+    [
+      'DELETE',
+      /^\/api\/gesture-sets\/([0-9a-f-]{36})$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        const sets = await store.setsOf(user.id);
+        if (!sets.some((x) => x.id === id)) throw new HttpError(404, 'set_not_found');
+        if (sets.length <= 1) throw new HttpError(409, 'last_set');
+        await store.transaction(async (tx) => {
+          await tx.clearGestures(user.id, id);
+          await tx.deleteSet(user.id, id);
+        });
+        changed(user, { removedSet: id });
+        return { ok: true };
+      },
+    ],
+
+    [
+      'GET',
+      /^\/api\/gestures$/,
+      async (req) => {
+        const { user } = await authenticate(req);
+        const sets = await ensureSets(user.id);
+        return {
+          sets: sets.map(setJson),
+          gestures: (await store.gesturesOf(user.id)).map(listJson),
+        };
+      },
+    ],
+    [
+      'POST',
+      /^\/api\/gestures$/,
+      async (req) => {
+        const { user } = await authenticate(req);
+        const body = await readJson(req, GESTURE_BODY);
+        const name = gestureName(body.name);
+        const modelVersion = modelVersionOf(body.modelVersion);
+        const takes = takesOf(body.takes);
+        const previews = previewsOf(body.previews, takes.length);
+        const sets = await ensureSets(user.id);
+        const setId = body.setId === undefined ? sets[0].id : String(body.setId);
+        if (!sets.some((x) => x.id === setId)) throw new HttpError(404, 'set_not_found');
+        const inSet = (await store.gestureNames(user.id)).filter((g) => g.set_id === setId);
+        if (inSet.length >= MAX_GESTURES) throw new HttpError(409, 'too_many_gestures');
+        if (inSet.some((g) => sameName(g.name, name))) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+        let row;
+        try {
+          row = await store.insertGesture({ id: randomUUID(), ownerId: user.id, setId, name, modelVersion, takes, previews, now: now() });
+        } catch (error) {
+          if (isUniqueViolation(error)) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+          throw error;
+        }
+        changed(user, { gesture: listJson(row) });
+        return [201, { gesture: gestureJson(row) }];
+      },
+    ],
+    [
+      'GET',
+      /^\/api\/gestures\/([0-9a-f-]{36})$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        const row = await store.gestureById(user.id, id);
+        if (!row) throw new HttpError(404, 'gesture_not_found');
+        return { gesture: gestureJson(row) };
+      },
+    ],
+    [
+      'PATCH',
+      /^\/api\/gestures\/([0-9a-f-]{36})$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        const gesture = await store.gestureById(user.id, id);
+        if (!gesture) throw new HttpError(404, 'gesture_not_found');
+        const current = gestureJson(gesture);
+        const body = await readJson(req);
+        const name = body.name === undefined ? current.name : gestureName(body.name);
+        let setId = current.setId;
+        if (body.setId !== undefined) {
+          setId = String(body.setId);
+          if (!(await store.setById(user.id, setId))) throw new HttpError(404, 'set_not_found');
+        }
+        const others = (await store.gestureNames(user.id)).filter((g) => g.id !== id && g.set_id === setId);
+        if (others.some((g) => sameName(g.name, name))) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+        let row;
+        try {
+          row = await store.updateGesture(user.id, id, { ...current, setId, name, now: now() });
+        } catch (error) {
+          if (isUniqueViolation(error)) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+          throw error;
+        }
+        changed(user, { gesture: listJson(row) });
+        return { gesture: gestureJson(row) };
+      },
+    ],
+    [
+      'POST',
+      /^\/api\/gestures\/([0-9a-f-]{36})\/takes$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        const body = await readJson(req, GESTURE_BODY);
+        const modelVersion = modelVersionOf(body.modelVersion);
+        const preview = previewOf(body.preview);
+        const row = await store.transaction(async (tx) => {
+          const gesture = await tx.gestureById(user.id, id);
+          if (!gesture) throw new HttpError(404, 'gesture_not_found');
+          const current = gestureJson(gesture);
+          // Takes from another model version cannot be compared: a new take starts over.
+          const same = current.modelVersion === modelVersion;
+          const kept = same ? current.takes : [];
+          const keptPreviews = same ? current.previews : [];
+          if (kept.length >= MAX_TAKES) throw new HttpError(409, 'too_many_takes');
+          const take = takeOf(body.take, kept[0]?.length);
+          return tx.updateGesture(user.id, id, {
+            ...current,
+            modelVersion,
+            takes: [...kept, take],
+            previews: [...keptPreviews, preview],
+            now: now(),
+          });
+        });
+        changed(user, { gesture: listJson(row) });
+        return [201, { gesture: gestureJson(row) }];
+      },
+    ],
+    [
+      'DELETE',
+      /^\/api\/gestures\/([0-9a-f-]{36})\/takes(?:\/(\d+))?$/,
+      async (req, [, id, index]) => {
+        const { user } = await authenticate(req);
+        const row = await store.transaction(async (tx) => {
+          const gesture = await tx.gestureById(user.id, id);
+          if (!gesture) throw new HttpError(404, 'gesture_not_found');
+          const current = gestureJson(gesture);
+          let takes = [];
+          let previews = [];
+          if (index !== undefined) {
+            const i = Number(index);
+            if (i >= current.takes.length) throw new HttpError(404, 'take_not_found');
+            takes = current.takes.filter((_, k) => k !== i);
+            previews = current.previews.filter((_, k) => k !== i);
+          }
+          return tx.updateGesture(user.id, id, { ...current, takes, previews, now: now() });
+        });
+        changed(user, { gesture: listJson(row) });
+        return { gesture: gestureJson(row) };
+      },
+    ],
+    [
+      'DELETE',
+      /^\/api\/gestures\/([0-9a-f-]{36})$/,
+      async (req, [, id]) => {
+        const { user } = await authenticate(req);
+        if (!(await store.deleteGesture(user.id, id))) throw new HttpError(404, 'gesture_not_found');
+        changed(user, { removed: id });
+        return { ok: true };
+      },
+    ],
+    [
+      'DELETE',
+      /^\/api\/gestures$/,
+      async (req, _m, url) => {
+        const { user } = await authenticate(req);
+        const setId = url.searchParams.get('setId') || undefined;
+        const removed = await store.clearGestures(user.id, setId);
+        changed(user, { cleared: setId ?? null });
+        return { ok: true, removed };
+      },
+    ],
   ];
 
   return async function api(req, res) {
     const url = new URL(req.url ?? '/', 'http://localhost');
-    if (!url.pathname.startsWith('/api/') || url.pathname.startsWith('/api/cloud/')) return false;
+    if (!url.pathname.startsWith('/api/')) return false;
     try {
       let pathMatched = false;
       for (const [method, pattern, handler] of routes) {

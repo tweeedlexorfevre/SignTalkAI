@@ -20,7 +20,6 @@ export { expect };
 /** Open the page and wait for the model and the test injection hook. */
 export async function openReady(page: Page): Promise<void> {
   await page.goto('./#recognition');
-  await page.getByRole('button', { name: 'На устройстве', exact: true }).click();
   await page.waitForFunction(() => window.__gesturesignTest?.modelReady() === true);
 }
 

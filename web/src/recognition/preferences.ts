@@ -1,23 +1,13 @@
 import { useSyncExternalStore } from 'react';
 export interface RecognitionPreferences {
-  /** What the camera reads: sign language (hands) or lip reading (mouth). */
-  method: 'signs' | 'lips';
-  engine: 'cloud' | 'local';
-  signLanguage: 'krsl' | 'rsl' | 'bukva' | 'asl';
-  vocabulary: 'krsl10' | 'free';
-  countdown: 1 | 3 | 5;
-  cloudSeconds: 3 | 5 | 8;
+  /** What the camera reads: the user's own gestures or the Russian fingerspelling alphabet. */
+  signLanguage: 'personal' | 'bukva';
   showSkeleton: boolean;
   mirror: boolean;
   speechRate: 0.8 | 1 | 1.2;
 }
 export const DEFAULT_PREFERENCES: RecognitionPreferences = {
-  method: 'signs',
-  engine: 'cloud',
-  signLanguage: 'krsl',
-  vocabulary: 'krsl10',
-  countdown: 3,
-  cloudSeconds: 5,
+  signLanguage: 'personal',
   showSkeleton: true,
   mirror: true,
   speechRate: 1,
@@ -31,15 +21,7 @@ export function parsePreferences(raw: string | null): RecognitionPreferences {
     /* defaults */
   }
   return {
-    method: value.method === 'lips' ? 'lips' : 'signs',
-    engine: value.engine === 'local' ? 'local' : 'cloud',
-    signLanguage:
-      value.signLanguage === 'asl' || value.signLanguage === 'rsl' || value.signLanguage === 'bukva'
-        ? value.signLanguage
-        : 'krsl',
-    vocabulary: value.vocabulary === 'free' ? 'free' : 'krsl10',
-    countdown: value.countdown === 1 || value.countdown === 5 ? value.countdown : 3,
-    cloudSeconds: value.cloudSeconds === 3 || value.cloudSeconds === 8 ? value.cloudSeconds : 5,
+    signLanguage: value.signLanguage === 'bukva' ? 'bukva' : 'personal',
     showSkeleton: typeof value.showSkeleton === 'boolean' ? value.showSkeleton : true,
     mirror: typeof value.mirror === 'boolean' ? value.mirror : true,
     speechRate: value.speechRate === 0.8 || value.speechRate === 1.2 ? value.speechRate : 1,

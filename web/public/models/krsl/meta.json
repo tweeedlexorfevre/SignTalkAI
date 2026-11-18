@@ -1,9 +1,0 @@
-{
-  "id": "krsl10",
-  "classes": 10,
-  "input": "features",
-  "dim": 168,
-  "threshold": 0.8,
-  "experimental": true,
-  "source": "https://github.com/kurshakuz/krsl-recogniton"
-}
