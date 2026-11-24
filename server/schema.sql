@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT    NOT NULL,
   created_at    INTEGER NOT NULL
 );
+ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0;
 
 -- One row per signed-in device. Only a SHA-256 of the bearer token is stored.
 CREATE TABLE IF NOT EXISTS sessions (
@@ -66,7 +67,9 @@ CREATE TABLE IF NOT EXISTS gesture_sets (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+ALTER TABLE gesture_sets ADD COLUMN scope TEXT NOT NULL DEFAULT 'personal' CHECK (scope IN ('personal', 'global'));
 CREATE INDEX IF NOT EXISTS gesture_sets_owner ON gesture_sets(owner_id);
+CREATE UNIQUE INDEX IF NOT EXISTS gesture_sets_global_name ON gesture_sets (lower(name)) WHERE scope = 'global';
 
 -- Personal gestures taught by a user: a name (the meaning) and 3–5 recorded takes
 -- (sign-model embeddings as a JSON array of arrays; numbers only, never video).
@@ -81,4 +84,7 @@ CREATE TABLE IF NOT EXISTS gestures (
   created_at    INTEGER NOT NULL,
   updated_at    INTEGER NOT NULL
 );
+ALTER TABLE gestures ADD COLUMN set_id TEXT REFERENCES gesture_sets(id) ON DELETE CASCADE;
+ALTER TABLE gestures ADD COLUMN previews TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE gestures ADD COLUMN scope TEXT NOT NULL DEFAULT 'personal' CHECK (scope IN ('personal', 'global'));
 CREATE INDEX IF NOT EXISTS gestures_owner ON gestures(owner_id);

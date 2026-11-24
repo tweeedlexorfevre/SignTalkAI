@@ -40,6 +40,7 @@ interface ApiGesture {
   previews?: (TakePreview | null)[];
   createdAt: number;
   updatedAt: number;
+  scope: 'personal' | 'global';
 }
 
 /** A live update from the server (sent to every device of the account). */
@@ -56,6 +57,7 @@ export interface GestureSet {
   id: string;
   name: string;
   createdAt: number;
+  scope: 'personal' | 'global';
 }
 
 export interface LibraryGesture extends Gesture {
@@ -68,6 +70,8 @@ export interface LibraryGesture extends Gesture {
   updatedAt: number;
   /** Recorded with another model version: the takes have to be recorded again. */
   stale: boolean;
+  scope: 'personal' | 'global';
+  readOnly: boolean;
 }
 
 export interface LibrarySnapshot {
@@ -78,6 +82,7 @@ export interface LibrarySnapshot {
   activeSetId: string | null;
   /** Gestures imported from this browser's old local storage on this load. */
   imported: number;
+  isAdmin: boolean;
 }
 
 export type TakeVerdict = 'good' | 'weak' | 'confused';
@@ -97,6 +102,7 @@ const EMPTY: LibrarySnapshot = {
   gestures: [],
   activeSetId: null,
   imported: 0,
+  isAdmin: false,
 };
 
 function storedActive(): string | null {
@@ -193,6 +199,7 @@ export class GestureLibrary {
         sets: data.sets,
         gestures: data.gestures.map((g) => this.fromApi(g, meta)),
         activeSetId: this.pickActive(data.sets),
+        isAdmin: !!messenger.getSnapshot().user?.isAdmin,
       });
       if (!this.migrated) {
         this.migrated = true;
@@ -231,6 +238,8 @@ export class GestureLibrary {
       previewsLoaded: g.previews !== undefined,
       durations: g.durations.filter((_, i) => keep[i]),
       updatedAt: g.updatedAt,
+      scope: g.scope ?? 'personal',
+      readOnly: g.scope === 'global' && !messenger.getSnapshot().user?.isAdmin,
     };
   }
 
@@ -341,16 +350,23 @@ export class GestureLibrary {
     this.set({ sets: [...this.snapshot.sets, set] });
     return set;
   }
+  async createGlobalSet(name: string): Promise<GestureSet> {
+    const { set } = await messenger.authed<{ set: GestureSet }>('POST', '/admin/gesture-sets', { name });
+    this.set({ sets: [...this.snapshot.sets, set] });
+    return set;
+  }
 
   async renameSet(id: string, name: string): Promise<void> {
-    const { set } = await messenger.authed<{ set: GestureSet }>('PATCH', `/gesture-sets/${id}`, {
+    const global = this.snapshot.sets.find((s) => s.id === id)?.scope === 'global';
+    const { set } = await messenger.authed<{ set: GestureSet }>('PATCH', global ? `/admin/gesture-sets/${id}` : `/gesture-sets/${id}`, {
       name,
     });
     this.set({ sets: this.snapshot.sets.map((s) => (s.id === id ? set : s)) });
   }
 
   async deleteSet(id: string): Promise<void> {
-    await messenger.authed('DELETE', `/gesture-sets/${id}`);
+    const global = this.snapshot.sets.find((s) => s.id === id)?.scope === 'global';
+    await messenger.authed('DELETE', global ? `/admin/gesture-sets/${id}` : `/gesture-sets/${id}`);
     const sets = this.snapshot.sets.filter((s) => s.id !== id);
     this.set({
       sets,
@@ -376,8 +392,16 @@ export class GestureLibrary {
         previewsLoaded: true,
         durations: [],
         stale: false,
+        readOnly: gesture.scope === 'global' && !messenger.getSnapshot().user?.isAdmin,
       }
     );
+  }
+
+  /** Admin-only variants use the shared-library API. */
+  async createGlobal(name: string, setId: string): Promise<LibraryGesture> {
+    const modelVersion = await this.modelVersion();
+    const { gesture } = await messenger.authed<{ gesture: ApiGesture }>('POST', '/admin/gestures', { setId, name, modelVersion });
+    return this.replace(gesture)!;
   }
 
   async addTake(
@@ -386,9 +410,10 @@ export class GestureLibrary {
     preview: TakePreview | null,
   ): Promise<LibraryGesture | undefined> {
     const modelVersion = await this.modelVersion();
+    const global = this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global';
     const { gesture } = await messenger.authed<{ gesture: ApiGesture }>(
       'POST',
-      `/gestures/${id}/takes`,
+      global ? `/admin/gestures/${id}/takes` : `/gestures/${id}/takes`,
       {
         modelVersion,
         take: Array.from(embedding, (x) => Math.round(x * 1e6) / 1e6),
@@ -400,7 +425,9 @@ export class GestureLibrary {
 
   /** Deletes one take (index), or every take to record the gesture again. */
   async removeTake(id: string, index?: number): Promise<void> {
-    const path = index === undefined ? `/gestures/${id}/takes` : `/gestures/${id}/takes/${index}`;
+    const global = this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global';
+    const base = global ? `/admin/gestures/${id}/takes` : `/gestures/${id}/takes`;
+    const path = index === undefined ? base : `${base}/${index}`;
     const { gesture } = await messenger.authed<{ gesture: ApiGesture }>('DELETE', path);
     this.replace(gesture);
   }
@@ -408,14 +435,14 @@ export class GestureLibrary {
   async update(id: string, patch: { name?: string; setId?: string }): Promise<void> {
     const { gesture } = await messenger.authed<{ gesture: ApiGesture }>(
       'PATCH',
-      `/gestures/${id}`,
+      this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global' ? `/admin/gestures/${id}` : `/gestures/${id}`,
       patch,
     );
     this.replace(gesture);
   }
 
   async remove(id: string): Promise<void> {
-    await messenger.authed('DELETE', `/gestures/${id}`);
+    await messenger.authed('DELETE', this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global' ? `/admin/gestures/${id}` : `/gestures/${id}`);
     this.set({ gestures: this.snapshot.gestures.filter((g) => g.id !== id) });
   }
 

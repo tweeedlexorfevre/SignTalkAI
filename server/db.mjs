@@ -20,11 +20,17 @@ export function openDatabase(path) {
   if (!columns.has('set_id'))
     db.exec('ALTER TABLE gestures ADD COLUMN set_id TEXT REFERENCES gesture_sets(id) ON DELETE CASCADE');
   if (!columns.has('previews')) db.exec("ALTER TABLE gestures ADD COLUMN previews TEXT NOT NULL DEFAULT '[]'");
+  if (!columns.has('scope')) db.exec("ALTER TABLE gestures ADD COLUMN scope TEXT NOT NULL DEFAULT 'personal'");
+  const userColumns = new Set(db.prepare('PRAGMA table_info(users)').all().map((c) => c.name));
+  if (!userColumns.has('is_admin')) db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+  const setColumns = new Set(db.prepare('PRAGMA table_info(gesture_sets)').all().map((c) => c.name));
+  if (!setColumns.has('scope')) db.exec("ALTER TABLE gesture_sets ADD COLUMN scope TEXT NOT NULL DEFAULT 'personal'");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS gesture_sets_global_name ON gesture_sets (lower(name)) WHERE scope = 'global'");
   return new Store(db);
 }
 
-const userColumns = 'id, public_id, username, display_name, created_at';
-const gestureColumns = 'id, set_id, name, model_version, takes, previews, created_at, updated_at';
+const userColumns = 'id, public_id, username, display_name, created_at, is_admin';
+const gestureColumns = 'id, set_id, name, model_version, takes, previews, created_at, updated_at, scope';
 
 /** Public view of a user row. Never contains the password hash or internal id. */
 export function publicUser(row) {
@@ -34,6 +40,7 @@ export function publicUser(row) {
         username: row.username,
         displayName: row.display_name,
         createdAt: row.created_at,
+        isAdmin: !!row.is_admin,
       }
     : null;
 }
@@ -54,6 +61,7 @@ export class Store {
       ),
       publicIdTaken: q('SELECT 1 FROM users WHERE public_id = ?'),
       rename: q('UPDATE users SET display_name = ? WHERE id = ?'),
+      setAdmin: q('UPDATE users SET is_admin = 1 WHERE id = ?'),
 
       insertSession: q(
         'INSERT INTO sessions (user_id, token_hash, device_name, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?)',
@@ -112,8 +120,8 @@ export class Store {
       answerCall: q("UPDATE calls SET status = 'active', answered_at = ? WHERE id = ?"),
       finishCall: q('UPDATE calls SET status = ?, ended_at = ? WHERE id = ?'),
 
-      setsOf: q('SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = ? ORDER BY created_at, id'),
-      setById: q('SELECT id, name, created_at, updated_at FROM gesture_sets WHERE owner_id = ? AND id = ?'),
+      setsOf: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE owner_id = ? AND scope = 'personal' ORDER BY created_at, id"),
+      setById: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE owner_id = ? AND id = ? AND scope = 'personal'"),
       insertSet: q('INSERT INTO gesture_sets (id, owner_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'),
       renameSet: q('UPDATE gesture_sets SET name = ?, updated_at = ? WHERE owner_id = ? AND id = ?'),
       deleteSetGestures: q('DELETE FROM gestures WHERE owner_id = ? AND set_id = ?'),
@@ -131,6 +139,17 @@ export class Store {
       ),
       deleteGesture: q('DELETE FROM gestures WHERE owner_id = ? AND id = ?'),
       clearGestures: q('DELETE FROM gestures WHERE owner_id = ?'),
+      globalSets: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE scope = 'global' ORDER BY created_at, id"),
+      globalSetById: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE id = ? AND scope = 'global'"),
+      insertGlobalSet: q("INSERT INTO gesture_sets (id, owner_id, name, scope, created_at, updated_at) VALUES (?, ?, ?, 'global', ?, ?)") ,
+      renameGlobalSet: q("UPDATE gesture_sets SET name = ?, updated_at = ? WHERE id = ? AND scope = 'global'"),
+      deleteGlobalSet: q("DELETE FROM gesture_sets WHERE id = ? AND scope = 'global'"),
+      globalGestureNames: q("SELECT id, set_id, name FROM gestures WHERE scope = 'global'"),
+      globalGestures: q(`SELECT ${gestureColumns} FROM gestures WHERE scope = 'global' ORDER BY created_at, id`),
+      globalGestureById: q(`SELECT ${gestureColumns} FROM gestures WHERE id = ? AND scope = 'global'`),
+      insertGlobalGesture: q("INSERT INTO gestures (id, owner_id, set_id, name, model_version, takes, previews, scope, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'global', ?, ?)") ,
+      updateGlobalGesture: q("UPDATE gestures SET set_id = ?, name = ?, model_version = ?, takes = ?, previews = ?, updated_at = ? WHERE id = ? AND scope = 'global'"),
+      deleteGlobalGesture: q("DELETE FROM gestures WHERE id = ? AND scope = 'global'"),
     };
   }
 
@@ -184,6 +203,7 @@ export class Store {
     this.s.rename.run(displayName, userId);
     return this.userById(userId);
   }
+  setAdmin(userId) { this.s.setAdmin.run(userId); return this.userById(userId); }
   publicIdOf(id) {
     return this.userById(id)?.public_id ?? null;
   }
@@ -324,4 +344,15 @@ export class Store {
   clearGestures(ownerId, setId) {
     return Number((setId ? this.s.deleteSetGestures.run(ownerId, setId) : this.s.clearGestures.run(ownerId)).changes);
   }
+  globalSets() { return this.s.globalSets.all(); }
+  globalSetById(id) { return this.s.globalSetById.get(id); }
+  insertGlobalSet({ id, ownerId, name, now }) { this.s.insertGlobalSet.run(id, ownerId, name, now, now); return this.globalSetById(id); }
+  renameGlobalSet(id, name, now) { this.s.renameGlobalSet.run(name, now, id); return this.globalSetById(id); }
+  deleteGlobalSet(id) { return this.s.deleteGlobalSet.run(id).changes > 0; }
+  globalGestureNames() { return this.s.globalGestureNames.all(); }
+  globalGestures() { return this.s.globalGestures.all().map((row) => this.gestureRow(row)); }
+  globalGestureById(id) { return this.gestureRow(this.s.globalGestureById.get(id)); }
+  insertGlobalGesture({ id, ownerId, setId, name, modelVersion, takes, previews, now }) { this.s.insertGlobalGesture.run(id, ownerId, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, now); return this.globalGestureById(id); }
+  updateGlobalGesture(id, { setId, name, modelVersion, takes, previews, now }) { this.s.updateGlobalGesture.run(setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, id); return this.globalGestureById(id); }
+  deleteGlobalGesture(id) { return this.s.deleteGlobalGesture.run(id).changes > 0; }
 }

@@ -169,6 +169,11 @@ export class Hub {
     for (const conn of this.sockets.get(userId) ?? []) this.send(conn, event);
   }
 
+  /** Sends a global library change to every connected account. */
+  broadcast(event) {
+    for (const set of this.sockets.values()) for (const conn of set) this.send(conn, event);
+  }
+
   broadcastPresence(user, related, online) {
     for (const id of related) this.sendToUser(id, { type: 'presence', user: user.public_id, online });
   }

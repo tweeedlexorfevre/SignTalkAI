@@ -126,13 +126,14 @@ function gestureJson(row, { full = true } = {}) {
     ...(full ? { previews: aligned } : {}),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    scope: row.scope ?? 'personal',
   };
 }
 
 const listJson = (row) => gestureJson(row, { full: false });
 
 function setJson(row) {
-  return { id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at, scope: row.scope ?? 'personal' };
 }
 
 const sameName = (a, b) => a.toLocaleLowerCase('ru') === b.toLocaleLowerCase('ru');
@@ -222,7 +223,10 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
     const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
     const found = token ? await store.sessionWithUser(tokenHash(token)) : null;
     if (!found) throw new HttpError(401, 'unauthorized');
-    const { session, user } = found;
+    const { session } = found;
+    let { user } = found;
+    const admins = String(env.ADMIN_USERNAMES ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+    if (!user.is_admin && admins.includes(String(user.username).toLowerCase())) user = await store.setAdmin(user.id);
     const t = now();
     // "Last seen" is informational: don't make the request wait for it.
     if (t - session.last_seen_at > TOUCH_EVERY_MS)
@@ -288,6 +292,12 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
 
   /** Every device of this user reloads its gesture library. */
   const changed = (user, update = {}) => hub.sendToUser(user.id, { type: 'gestures:changed', ...update });
+  const globalChanged = (update = {}) => hub.broadcast({ type: 'gestures:changed', ...update });
+  async function admin(req) {
+    const auth = await authenticate(req);
+    if (!auth.user.is_admin) throw new HttpError(403, 'forbidden');
+    return auth.user;
+  }
 
   const isUniqueViolation = (error) => error?.code === '23505' || String(error?.message).includes('UNIQUE');
 
@@ -363,7 +373,7 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
       /^\/api\/me$/,
       async (req) => {
         const { user, session } = await authenticate(req);
-        return { user: publicUser(user), sessionId: session.id };
+        return { user: publicUser(user), sessionId: session.id, isAdmin: !!user.is_admin };
       },
     ],
     [
@@ -524,6 +534,49 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
       },
     ],
 
+    // --- global gesture library (admins only) ---------------------------------
+    ['POST', /^\/api\/admin\/gesture-sets$/, async (req) => {
+      const user = await admin(req); const name = gestureName((await readJson(req)).name);
+      if ((await store.globalSets()).some((s) => sameName(s.name, name))) throw new HttpError(409, 'set_exists', { name: 'taken' });
+      let set;
+      try { set = await store.insertGlobalSet({ id: randomUUID(), ownerId: user.id, name, now: now() }); }
+      catch (error) { if (isUniqueViolation(error)) throw new HttpError(409, 'set_exists', { name: 'taken' }); throw error; }
+      globalChanged({ set: setJson(set) }); return [201, { set: setJson(set) }];
+    }],
+    ['PATCH', /^\/api\/admin\/gesture-sets\/([0-9a-f-]{36})$/, async (req, [, id]) => {
+      await admin(req); const name = gestureName((await readJson(req)).name); const sets = await store.globalSets();
+      if (!sets.some((s) => s.id === id)) throw new HttpError(404, 'set_not_found');
+      if (sets.some((s) => s.id !== id && sameName(s.name, name))) throw new HttpError(409, 'set_exists', { name: 'taken' });
+      const set = await store.renameGlobalSet(id, name, now()); globalChanged({ set: setJson(set) }); return { set: setJson(set) };
+    }],
+    ['DELETE', /^\/api\/admin\/gesture-sets\/([0-9a-f-]{36})$/, async (req, [, id]) => {
+      await admin(req); if (!(await store.deleteGlobalSet(id))) throw new HttpError(404, 'set_not_found'); globalChanged({ removedSet: id }); return { ok: true };
+    }],
+    ['POST', /^\/api\/admin\/gestures$/, async (req) => {
+      const user = await admin(req); const body = await readJson(req, GESTURE_BODY); const name = gestureName(body.name);
+      const modelVersion = modelVersionOf(body.modelVersion); const takes = takesOf(body.takes); const previews = previewsOf(body.previews, takes.length); const setId = String(body.setId ?? '');
+      if (!(await store.globalSetById(setId))) throw new HttpError(404, 'set_not_found');
+      const names = (await store.globalGestureNames()).filter((g) => g.set_id === setId);
+      if (names.length >= MAX_GESTURES) throw new HttpError(409, 'too_many_gestures'); if (names.some((g) => sameName(g.name, name))) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+      const row = await store.insertGlobalGesture({ id: randomUUID(), ownerId: user.id, setId, name, modelVersion, takes, previews, now: now() }); globalChanged({ gesture: listJson(row) }); return [201, { gesture: gestureJson(row) }];
+    }],
+    ['GET', /^\/api\/admin\/gestures\/([0-9a-f-]{36})$/, async (req, [, id]) => { await admin(req); const row = await store.globalGestureById(id); if (!row) throw new HttpError(404, 'gesture_not_found'); return { gesture: gestureJson(row) }; }],
+    ['PATCH', /^\/api\/admin\/gestures\/([0-9a-f-]{36})$/, async (req, [, id]) => {
+      await admin(req); const currentRow = await store.globalGestureById(id); if (!currentRow) throw new HttpError(404, 'gesture_not_found'); const current = gestureJson(currentRow); const body = await readJson(req);
+      const name = body.name === undefined ? current.name : gestureName(body.name); const setId = body.setId === undefined ? current.setId : String(body.setId);
+      if (!(await store.globalSetById(setId))) throw new HttpError(404, 'set_not_found'); const others = (await store.globalGestureNames()).filter((g) => g.id !== id && g.set_id === setId); if (others.some((g) => sameName(g.name, name))) throw new HttpError(409, 'gesture_exists', { name: 'taken' });
+      const row = await store.updateGlobalGesture(id, { ...current, setId, name, now: now() }); globalChanged({ gesture: listJson(row) }); return { gesture: gestureJson(row) };
+    }],
+    ['POST', /^\/api\/admin\/gestures\/([0-9a-f-]{36})\/takes$/, async (req, [, id]) => {
+      await admin(req); const body = await readJson(req, GESTURE_BODY); const modelVersion = modelVersionOf(body.modelVersion); const preview = previewOf(body.preview);
+      const row = await store.transaction(async (tx) => { const old = await tx.globalGestureById(id); if (!old) throw new HttpError(404, 'gesture_not_found'); const current = gestureJson(old); const same = current.modelVersion === modelVersion; const takes = same ? current.takes : []; const previews = same ? current.previews : []; if (takes.length >= MAX_TAKES) throw new HttpError(409, 'too_many_takes'); return tx.updateGlobalGesture(id, { ...current, modelVersion, takes: [...takes, takeOf(body.take, takes[0]?.length)], previews: [...previews, preview], now: now() }); });
+      globalChanged({ gesture: listJson(row) }); return [201, { gesture: gestureJson(row) }];
+    }],
+    ['DELETE', /^\/api\/admin\/gestures\/([0-9a-f-]{36})\/takes\/(\d+)$/, async (req, [, id, index]) => {
+      await admin(req); const row = await store.transaction(async (tx) => { const old = await tx.globalGestureById(id); if (!old) throw new HttpError(404, 'gesture_not_found'); const current = gestureJson(old); const i = Number(index); if (i >= current.takes.length) throw new HttpError(404, 'take_not_found'); return tx.updateGlobalGesture(id, { ...current, takes: current.takes.filter((_, k) => k !== i), previews: current.previews.filter((_, k) => k !== i), now: now() }); }); globalChanged({ gesture: listJson(row) }); return { gesture: gestureJson(row) };
+    }],
+    ['DELETE', /^\/api\/admin\/gestures\/([0-9a-f-]{36})$/, async (req, [, id]) => { await admin(req); if (!(await store.deleteGlobalGesture(id))) throw new HttpError(404, 'gesture_not_found'); globalChanged({ removed: id }); return { ok: true }; }],
+
     // --- gesture sets and personal gestures (stored per account, used on every device) ---
     [
       'GET',
@@ -585,8 +638,8 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
         const { user } = await authenticate(req);
         const sets = await ensureSets(user.id);
         return {
-          sets: sets.map(setJson),
-          gestures: (await store.gesturesOf(user.id)).map(listJson),
+          sets: [...sets, ...(await store.globalSets())].map(setJson),
+          gestures: [...(await store.gesturesOf(user.id)), ...(await store.globalGestures())].map(listJson),
         };
       },
     ],
@@ -622,7 +675,7 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
       /^\/api\/gestures\/([0-9a-f-]{36})$/,
       async (req, [, id]) => {
         const { user } = await authenticate(req);
-        const row = await store.gestureById(user.id, id);
+        const row = (await store.gestureById(user.id, id)) ?? (await store.globalGestureById(id));
         if (!row) throw new HttpError(404, 'gesture_not_found');
         return { gesture: gestureJson(row) };
       },

@@ -120,10 +120,12 @@ function NameForm({
 
 function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
   const [adding, setAdding] = useState(false);
+  const [addingGlobal, setAddingGlobal] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const active = lib.sets.find((s) => s.id === lib.activeSetId);
+  const canEditActive = active?.scope !== 'global' || lib.isAdmin;
   return (
     <section className="content-card space-y-3" aria-label={t('Наборы жестов', 'Ым жинақтары')}>
       <div className="flex flex-wrap items-center gap-2" role="group">
@@ -149,7 +151,7 @@ function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
             </button>
           );
         })}
-        {adding ? null : (
+        {adding || addingGlobal || !canEditActive ? null : (
           <Button
             size="sm"
             variant="ghost"
@@ -161,6 +163,12 @@ function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
             {t('Новый набор', 'Жаңа жинақ')}
           </Button>
         )}
+        {lib.isAdmin && !adding && !addingGlobal ? (
+          <Button size="sm" variant="ghost" onClick={() => setAddingGlobal(true)}>
+            <FolderPlus aria-hidden className="size-4" />
+            {t('Общий набор', 'Ортақ жинақ')}
+          </Button>
+        ) : null}
       </div>
       {adding ? (
         <NameForm
@@ -175,7 +183,15 @@ function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
           }}
         />
       ) : null}
-      {active && !adding ? (
+      {addingGlobal ? (
+        <NameForm
+          initial=""
+          label={t('Название общего набора', 'Ортақ жинақ атауы')}
+          submit={async (name) => { const set = await library.createGlobalSet(name); library.setActiveSet(set.id); }}
+          onDone={() => setAddingGlobal(false)}
+        />
+      ) : null}
+      {active && !adding && !addingGlobal && canEditActive ? (
         renaming ? (
           <NameForm
             initial={active.name}
@@ -363,6 +379,7 @@ function GestureDetail({
     library.loadPreviews(gesture.id).catch(onError);
   }, [gesture.id, gesture.updatedAt, gesture.previewsLoaded, onError]);
   const problems = quality.filter((q) => q.verdict !== 'good').length;
+  const canEdit = !gesture.readOnly;
   const recording = armed?.id === gesture.id;
   return (
     <div className="space-y-4">
@@ -370,7 +387,7 @@ function GestureDetail({
         <ArrowLeft aria-hidden className="size-4" />
         {t('Все жесты набора', 'Жинақтың барлық ымы')}
       </Button>
-      {renaming ? (
+      {renaming && canEdit ? (
         <NameForm
           initial={gesture.name}
           label={t('Значение жеста', 'Ым мағынасы')}
@@ -382,7 +399,7 @@ function GestureDetail({
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-2xl font-semibold tracking-tight">{gesture.name}</h3>
-          <Button
+          {canEdit ? <Button
             size="sm"
             variant="ghost"
             onClick={() => {
@@ -391,10 +408,10 @@ function GestureDetail({
           >
             <Pencil aria-hidden className="size-4" />
             {t('Изменить значение', 'Мағынасын өзгерту')}
-          </Button>
+          </Button> : null}
         </div>
       )}
-      <label className="inline-setting">
+      {canEdit ? <label className="inline-setting">
         <span>{t('Набор', 'Жинақ')}</span>
         <select
           value={gesture.setId ?? ''}
@@ -408,7 +425,7 @@ function GestureDetail({
             </option>
           ))}
         </select>
-      </label>
+      </label> : null}
       <div className="flex items-center gap-2 text-sm text-ink-muted">
         <TakeDots count={gesture.takes.length} />
         <span>
@@ -423,7 +440,7 @@ function GestureDetail({
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {canEdit ? <div className="flex flex-wrap gap-2">
         {recording ? (
           <Button
             onClick={() => {
@@ -508,7 +525,7 @@ function GestureDetail({
             </Button>
           </span>
         )}
-      </div>
+      </div> : null}
 
       <div aria-live="polite" data-testid="teach-status">
         {recording ? (
@@ -544,9 +561,7 @@ function GestureDetail({
               index={i}
               quality={isReady(gesture) ? quality[i] : undefined}
               t={t}
-              onDelete={() => {
-                library.removeTake(gesture.id, i).catch(onError);
-              }}
+              onDelete={() => { if (canEdit) library.removeTake(gesture.id, i).catch(onError); }}
             />
           ))}
         </ul>
@@ -588,6 +603,8 @@ function SetOverview({
   const [confirmClear, setConfirmClear] = useState(false);
   const inputId = useId();
   const setName_ = lib.sets.find((s) => s.id === setId)?.name ?? '';
+  const currentSet = lib.sets.find((s) => s.id === setId);
+  const canEdit = currentSet?.scope !== 'global' || lib.isAdmin;
 
   const add = (event: SyntheticEvent) => {
     event.preventDefault();
@@ -602,8 +619,7 @@ function SetOverview({
     setFormError(problem);
     if (problem) return;
     setBusy(true);
-    library
-      .create(trimmed, setId)
+    (currentSet?.scope === 'global' ? library.createGlobal(trimmed, setId) : library.create(trimmed, setId))
       .then((gesture) => {
         setName('');
         open(gesture.id);
@@ -621,7 +637,7 @@ function SetOverview({
   return (
     <div className="space-y-5">
       <h3 className="text-lg font-semibold">{setName_}</h3>
-      <form onSubmit={add} className="space-y-1.5" noValidate>
+      {canEdit ? <form onSubmit={add} className="space-y-1.5" noValidate>
         <label htmlFor={inputId} className="block text-sm font-medium">
           {t('Новый жест — что он значит', 'Жаңа ым — мағынасы')}
         </label>
@@ -643,7 +659,7 @@ function SetOverview({
           </Button>
         </div>
         {formError ? <p className="text-sm text-danger">{formError}</p> : null}
-      </form>
+      </form> : null}
 
       {ready.length ? (
         <div aria-live="polite" data-testid="teach-status" className="space-y-2">

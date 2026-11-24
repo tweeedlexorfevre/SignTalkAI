@@ -95,6 +95,16 @@ DROP INDEX IF EXISTS gestures_owner_name;
 CREATE UNIQUE INDEX IF NOT EXISTS gestures_set_name ON gestures (set_id, lower(name));
 CREATE INDEX IF NOT EXISTS gestures_owner ON gestures (owner_id);
 
+-- Admin flag: admins can manage global (shared) gestures visible to all users.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT FALSE;
+
+-- Scope: 'personal' (owner only) or 'global' (visible to everyone, managed by admins).
+ALTER TABLE gesture_sets ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'personal' CHECK (scope IN ('personal', 'global'));
+ALTER TABLE gestures     ADD COLUMN IF NOT EXISTS scope text NOT NULL DEFAULT 'personal' CHECK (scope IN ('personal', 'global'));
+-- Global set names must be unique across the whole system.
+CREATE UNIQUE INDEX IF NOT EXISTS gesture_sets_global_name
+  ON gesture_sets (lower(name)) WHERE scope = 'global';
+
 -- Lock the tables away from the Supabase REST/GraphQL API (anon and signed-in API users).
 ALTER TABLE users    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;

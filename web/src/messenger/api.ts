@@ -6,6 +6,7 @@ export interface User {
   username: string;
   displayName: string;
   createdAt: number;
+  isAdmin?: boolean;
 }
 
 export type MessageKind = 'text' | 'sign' | 'speech' | 'call';
