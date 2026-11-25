@@ -5,6 +5,7 @@ import type { Session, SessionSnapshot } from '../app/session';
 import { CAMERA_MESSAGES } from '../lib/camera';
 import { drawLandmarks } from '../lib/overlay';
 import { handsMissing } from '../ml/landmarks';
+import { LandmarkSmoother } from '../ml/landmark-smoother';
 import type { FrameStatus } from '../ml/segmenter';
 import { ReplayPicker } from './ReplayPicker';
 import { Button } from './ui';
@@ -96,12 +97,14 @@ export function Stage({
   useEffect(() => {
     let pending: Float32Array | null = null;
     let raf = 0;
-    const off = session.onFrame((frame, source) => {
+    // Keep the overlay stable while the recognizer sees the original motion.
+    const smoother = snap.source === 'camera' ? new LandmarkSmoother() : null;
+    const off = session.onFrame((frame, source, { t }) => {
       // Replays start and end with hands down (and a tail of empty frames so the
       // recogniser sees the sign end); keep the last signing pose on screen.
       if (source === 'camera' && !prefs.showSkeleton) return;
       if (source !== 'camera' && handsMissing(frame)) return;
-      pending = frame;
+      pending = source === 'camera' && smoother ? smoother.filter(frame, t) : frame;
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
@@ -119,7 +122,7 @@ export function Stage({
       off();
       cancelAnimationFrame(raf);
     };
-  }, [session, prefs.showSkeleton]);
+  }, [session, prefs.showSkeleton, snap.source]);
 
   // Clear the overlay when the source stops.
   useEffect(() => {

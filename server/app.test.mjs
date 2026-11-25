@@ -291,6 +291,60 @@ test('personal gestures are stored per account, grouped in sets and shared by it
   await new Promise((r) => setTimeout(r, 50));
 });
 
+test('shared gestures appear once for their creator and stay separate from personal gestures', async () => {
+  const { data: { token } } = await call('POST', '/api/auth/register', {
+    body: { username: 'libraryadmin', displayName: 'Администратор', password: 'test-password' },
+  });
+  const { data: { token: viewer } } = await call('POST', '/api/auth/register', {
+    body: { username: 'libraryviewer', displayName: 'Читатель', password: 'test-password' },
+  });
+  await app.store.setAdmin((await app.store.userByUsername('libraryadmin')).id);
+  const shared = await call('POST', '/api/admin/gesture-sets', { token, body: { name: 'for all' } });
+  assert.equal(shared.status, 201);
+  const setId = shared.data.set.id;
+  const ids = [];
+  for (const name of ['Привет', 'Спасибо']) {
+    const created = await call('POST', '/api/admin/gestures', {
+      token, body: { name, modelVersion: 'v1', setId },
+    });
+    assert.equal(created.status, 201);
+    ids.push(created.data.gesture.id);
+  }
+  const personal = await call('POST', '/api/gestures', {
+    token, body: { name: 'Привет', modelVersion: 'v1' },
+  });
+  assert.equal(personal.status, 201);
+
+  for (const member of [token, viewer]) {
+    const { data } = await call('GET', '/api/gestures', { token: member });
+    const sharedGestures = data.gestures.filter((g) => g.setId === setId);
+    assert.deepEqual(sharedGestures.map((g) => g.id).sort(), [...ids].sort());
+    assert.ok(sharedGestures.every((g) => g.scope === 'global'));
+    assert.equal(data.gestures.length, member === token ? 3 : 2);
+  }
+  assert.equal((await call('GET', `/api/gestures/${ids[0]}`, { token: viewer })).status, 200);
+  assert.equal((await call('PATCH', `/api/gestures/${ids[0]}`, { token, body: { name: 'Другое' } })).status, 404);
+  assert.equal((await call('DELETE', `/api/gestures/${ids[0]}`, { token })).status, 404);
+  assert.equal((await call('DELETE', `/api/gestures?setId=${setId}`, { token })).data.removed, 0);
+
+  assert.equal((await call('DELETE', '/api/gestures', { token })).data.removed, 1);
+  assert.equal((await call('GET', '/api/gestures', { token })).data.gestures.length, 2);
+
+  const clearShared = `/api/admin/gestures?setId=${setId}`;
+  assert.equal((await call('DELETE', clearShared, { token: viewer })).status, 403);
+  const ws = await socket(viewer);
+  try {
+    assert.equal((await call('DELETE', clearShared, { token })).data.removed, 2);
+    assert.equal((await ws.next('gestures:changed')).cleared, setId);
+    const { data } = await call('GET', '/api/gestures', { token: viewer });
+    assert.equal(data.gestures.length, 0);
+    assert.ok(data.sets.some((set) => set.id === setId));
+  } finally {
+    ws.close();
+    await once(ws.ws, 'close');
+  }
+});
+
 test('static files: content ETags with 304, precompressed .br/.gz chosen by Accept-Encoding', async () => {
   const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');

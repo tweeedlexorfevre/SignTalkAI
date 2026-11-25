@@ -13,7 +13,18 @@ import { brotliCompress, constants, gzip } from 'node:zlib';
 const brotli = promisify(brotliCompress);
 const gz = promisify(gzip);
 
-const EXTENSIONS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.wasm', '.onnx', '.task']);
+const EXTENSIONS = new Set([
+  '.html',
+  '.js',
+  '.mjs',
+  '.css',
+  '.json',
+  '.svg',
+  '.txt',
+  '.wasm',
+  '.onnx',
+  '.task',
+]);
 const MIN_SIZE = 1024;
 const MAX_RATIO = 0.95;
 
@@ -62,5 +73,9 @@ for await (const path of files(dir)) {
 }
 const results = await Promise.all(jobs);
 for (const { path, size, kept } of results.sort((a, b) => b.size - a.size).slice(0, 8))
-  console.log(`  ${relative(dir, path)} ${(size / 1e6).toFixed(1)} MB -> ${kept.join(', ') || 'kept as is'}`);
-console.log(`precompressed ${results.length} files in ${((Date.now() - started) / 1000).toFixed(0)} s`);
+  console.log(
+    `  ${relative(dir, path)} ${(size / 1e6).toFixed(1)} MB -> ${kept.join(', ') || 'kept as is'}`,
+  );
+console.log(
+  `precompressed ${results.length} files in ${((Date.now() - started) / 1000).toFixed(0)} s`,
+);

@@ -113,7 +113,11 @@ export class Recognizer {
       const decision = decide(inference.logits, this.shipped, this.meta.calibration, { partial });
       this.emit({ type: 'result', result: { decision, inference, segment, partial } });
     } catch (error) {
-      this.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      if (generation === this.generation)
+        this.emit({
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error),
+        });
     }
   }
 }

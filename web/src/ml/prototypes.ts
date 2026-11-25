@@ -55,6 +55,10 @@ export function isReady(g: Gesture): boolean {
   return g.takes.length >= MIN_TAKES;
 }
 
+export function gestureMeaning(name: string): string {
+  return name.replace(/\s+/g, ' ').trim().toLocaleLowerCase('ru');
+}
+
 export function addTake(g: Gesture, embedding: Float32Array): Gesture {
   if (g.takes.length >= MAX_TAKES) return g;
   return { ...g, takes: [...g.takes, embedding] };
@@ -70,8 +74,10 @@ export function matchGesture(
   const scored = ready
     .map((gesture) => ({ gesture, similarity: cosine(embedding, prototypeOf(gesture.takes)) }))
     .sort((a, b) => b.similarity - a.similarity);
-  const [best, second] = scored;
+  const [best] = scored;
   if (!best) return { kind: 'empty' };
+  const meaning = gestureMeaning(best.gesture.name);
+  const second = scored.find(({ gesture }) => gestureMeaning(gesture.name) !== meaning);
   const runnerUp = second?.similarity ?? -1;
   const confident =
     best.similarity >= thresholds.minSimilarity &&

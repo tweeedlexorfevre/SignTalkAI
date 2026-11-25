@@ -50,6 +50,21 @@ describe('prototypes', () => {
     expect(m.kind).toBe('not-sure');
   });
 
+  it('uses the closest different meaning to measure confidence', () => {
+    const take = unit(1, 0);
+    const first = { id: 'first', name: 'Қалайсың?', takes: [take, take, take] };
+    const duplicate = { ...first, id: 'duplicate', name: ' ҚАЛАЙСЫҢ? ' };
+    const other = gesture('Сәлем', [unit(0, 1), unit(0, 1), unit(0, 1)]);
+    expect(matchGesture(take, [first, duplicate, other], thresholds)).toMatchObject({
+      kind: 'match',
+      gesture: first,
+      similarity: 1,
+      runnerUp: 0,
+    });
+    const near = gesture('Жақсы', [unit(1, 0.1), unit(1, 0.1), unit(1, 0.1)]);
+    expect(matchGesture(take, [first, duplicate, near], thresholds).kind).toBe('not-sure');
+  });
+
   it('ignores gestures with too few takes', () => {
     const half = gesture('half', [unit(1, 0)]);
     expect(matchGesture(unit(1, 0), [half], thresholds).kind).toBe('empty');

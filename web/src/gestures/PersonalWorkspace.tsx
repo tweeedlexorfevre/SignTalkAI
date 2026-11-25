@@ -6,7 +6,7 @@ import { Stage } from '../components/Stage';
 import { ModelGate } from '../components/ModelGate';
 import { Button, Card, Percent } from '../components/ui';
 import { conversation } from '../conversation/session';
-import { MIN_TAKES, isReady, type GestureMatch } from '../ml/prototypes';
+import { MIN_TAKES, gestureMeaning, isReady, type GestureMatch } from '../ml/prototypes';
 import type { LoadedModel } from '../ml/model-client';
 import { library, useGestureLibrary, type LibrarySnapshot } from './library';
 import { useSpotter } from './useSpotter';
@@ -45,7 +45,8 @@ export function MatchResult({
       </div>
     );
   if (match.kind === 'match') {
-    const wrong = expected !== undefined && match.gesture.id !== expected;
+    const wrong =
+      expected !== undefined && gestureMeaning(match.gesture.name) !== gestureMeaning(expected);
     return (
       <div
         className={`rounded-xl border px-4 py-3 ${wrong ? 'border-danger/40 bg-danger-soft' : 'border-success/40 bg-success-soft'}`}

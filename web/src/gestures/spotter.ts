@@ -18,7 +18,7 @@
 import { modelInput, type ModelInput } from '../ml/features';
 import { handsMissing, type Frame } from '../ml/landmarks';
 import type { ModelMeta } from '../ml/meta';
-import { cosine } from '../ml/prototypes';
+import { cosine, gestureMeaning } from '../ml/prototypes';
 import { handSpeed } from '../ml/segmenter';
 
 export interface SpotGesture {
@@ -79,6 +79,7 @@ interface Sample {
 interface Pending {
   id: string;
   name: string;
+  meaning: string;
   similarity: number;
   ratio: number;
   /** End time of the best window so far: frames up to here belong to this sign. */
@@ -99,7 +100,7 @@ export class GestureSpotter {
   private burstSpotted = false;
   private pending: Pending | null = null;
   /** The last word sent: the rest of a long sign must not count as the same word again. */
-  private lastWord: { id: string; t: number } | null = null;
+  private lastWord: { meaning: string; t: number } | null = null;
   private busy = false;
   private nextTick = 0;
   private stride = STRIDE_MS;
@@ -195,7 +196,7 @@ export class GestureSpotter {
     this.busy = true;
     const started = performance.now();
     try {
-      let best: (Pending & { second: number }) | null = null;
+      let best: Pending | null = null;
       for (const length of index.windows) {
         const from = now - length;
         const samples = this.window(Math.max(from, this.cutT), now);
@@ -210,21 +211,22 @@ export class GestureSpotter {
           .sort((a, b) => b.s - a.s);
         const top = scored[0];
         if (!top) continue;
-        const second = scored[1]?.s ?? -1;
+        const meaning = gestureMeaning(top.g.name);
+        const second = scored.find(({ g }) => gestureMeaning(g.name) !== meaning)?.s ?? -1;
         const recent = this.lastWord;
-        if (recent?.id === top.g.id && now - recent.t < top.g.duration * 0.8) continue;
+        if (recent?.meaning === meaning && now - recent.t < top.g.duration * 0.8) continue;
         if (top.s < top.g.threshold || top.s - second < this.meta.teach.margin) continue;
         const ratio = top.s / top.g.threshold;
         if (!best || ratio > best.ratio)
           best = {
             id: top.g.id,
             name: top.g.name,
+            meaning,
             similarity: top.s,
             ratio,
             endT: now,
             firstT: now,
             hits: 1,
-            second,
           };
       }
       this.decide(best, now);
@@ -239,9 +241,11 @@ export class GestureSpotter {
 
   private decide(best: Pending | null, now: number): void {
     const p = this.pending;
-    if (best && p && best.id === p.id) {
+    if (best && p && best.meaning === p.meaning) {
       p.hits++;
       if (best.similarity >= p.similarity) {
+        p.id = best.id;
+        p.name = best.name;
         p.similarity = best.similarity;
         p.ratio = best.ratio;
         p.endT = now;
@@ -275,7 +279,7 @@ export class GestureSpotter {
     this.burstSpotted = true;
     this.cutT = p.endT;
     this.buffer = this.buffer.filter((s) => s.t > p.endT);
-    this.lastWord = { id: p.id, t: p.endT };
+    this.lastWord = { meaning: p.meaning, t: p.endT };
     this.hooks.emit({ type: 'word', id: p.id, name: p.name, similarity: p.similarity, fast });
   }
 
@@ -301,14 +305,15 @@ export class GestureSpotter {
       const match = this.hooks.matchBurst(embedding);
       if (match.kind === 'empty') return;
       const gesture = this.hooks.index().gestures.find((g) => g.id === match.gesture.id);
+      const { id, name } = match.gesture;
+      const meaning = gestureMeaning(name);
       // After spotted words, the tail must be a whole sign, not the end of the last one.
       if (spotted) {
         if (match.kind !== 'match' || !gesture || span < gesture.duration * 0.6) return;
-        if (lastWord?.id === gesture.id && span < gesture.duration * 0.8) return;
+        if (lastWord?.meaning === meaning && span < gesture.duration * 0.8) return;
       }
-      const { id, name } = match.gesture;
       if (match.kind === 'match') {
-        this.lastWord = { id, t: quietFrom };
+        this.lastWord = { meaning, t: quietFrom };
         this.hooks.emit({ type: 'word', id, name, similarity: match.similarity, fast: false });
       } else this.hooks.emit({ type: 'unsure', id, name, similarity: match.similarity });
     } catch {

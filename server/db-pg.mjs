@@ -348,18 +348,18 @@ export class PgStore {
   }
   /** Gestures saved before sets existed go into `setId`. */
   async adoptOrphans(ownerId, setId) {
-    return this.run('UPDATE gestures SET set_id = $2 WHERE owner_id = $1 AND set_id IS NULL', [ownerId, setId]);
+    return this.run("UPDATE gestures SET set_id = $2 WHERE owner_id = $1 AND set_id IS NULL AND scope = 'personal'", [ownerId, setId]);
   }
 
   /** Names only (for duplicate checks), without the takes. */
   async gestureNames(ownerId) {
-    return this.all('SELECT id, set_id, name FROM gestures WHERE owner_id = $1', [ownerId]);
+    return this.all("SELECT id, set_id, name FROM gestures WHERE owner_id = $1 AND scope = 'personal'", [ownerId]);
   }
   async gesturesOf(ownerId) {
-    return this.all(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 ORDER BY created_at, id`, [ownerId]);
+    return this.all(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 AND scope = 'personal' ORDER BY created_at, id`, [ownerId]);
   }
   async gestureById(ownerId, id) {
-    return this.one(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 AND id = $2`, [ownerId, id]);
+    return this.one(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = $1 AND id = $2 AND scope = 'personal'`, [ownerId, id]);
   }
   async insertGesture({ id, ownerId, setId, name, modelVersion, takes, previews, now }) {
     return this.one(
@@ -372,18 +372,18 @@ export class PgStore {
   async updateGesture(ownerId, id, { setId, name, modelVersion, takes, previews, now }) {
     return this.one(
       `UPDATE gestures SET set_id = $3, name = $4, model_version = $5, takes = $6::jsonb, previews = $7::jsonb, updated_at = $8
-        WHERE owner_id = $1 AND id = $2
+        WHERE owner_id = $1 AND id = $2 AND scope = 'personal'
         RETURNING ${gestureColumns}`,
       [ownerId, id, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now],
     );
   }
   async deleteGesture(ownerId, id) {
-    return (await this.run('DELETE FROM gestures WHERE owner_id = $1 AND id = $2', [ownerId, id])) > 0;
+    return (await this.run("DELETE FROM gestures WHERE owner_id = $1 AND id = $2 AND scope = 'personal'", [ownerId, id])) > 0;
   }
   async clearGestures(ownerId, setId) {
     return setId
-      ? this.run('DELETE FROM gestures WHERE owner_id = $1 AND set_id = $2', [ownerId, setId])
-      : this.run('DELETE FROM gestures WHERE owner_id = $1', [ownerId]);
+      ? this.run("DELETE FROM gestures WHERE owner_id = $1 AND set_id = $2 AND scope = 'personal'", [ownerId, setId])
+      : this.run("DELETE FROM gestures WHERE owner_id = $1 AND scope = 'personal'", [ownerId]);
   }
   async globalSets() { return this.all("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE scope = 'global' ORDER BY created_at, id"); }
   async globalSetById(id) { return this.one("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE id = $1 AND scope = 'global'", [id]); }
@@ -402,4 +402,5 @@ export class PgStore {
     return this.one(`UPDATE gestures SET set_id = $2, name = $3, model_version = $4, takes = $5::jsonb, previews = $6::jsonb, updated_at = $7 WHERE id = $1 AND scope = 'global' RETURNING ${gestureColumns}`, [id, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now]);
   }
   async deleteGlobalGesture(id) { return (await this.run("DELETE FROM gestures WHERE id = $1 AND scope = 'global'", [id])) > 0; }
+  async clearGlobalGestures(setId) { return this.run("DELETE FROM gestures WHERE set_id = $1 AND scope = 'global'", [setId]); }
 }

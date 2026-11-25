@@ -670,7 +670,7 @@ details > summary {
   margin-right: 10px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--signal);
+  color: inherit;
 }
 .auth-field input {
   min-height: 54px;
@@ -1690,6 +1690,7 @@ details > summary {
 }
 .conversation-toolbar .text-link {
   align-self: center;
+  color: var(--ink);
 }
 .native-grid {
   gap: 0;

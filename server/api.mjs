@@ -576,6 +576,18 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
       await admin(req); const row = await store.transaction(async (tx) => { const old = await tx.globalGestureById(id); if (!old) throw new HttpError(404, 'gesture_not_found'); const current = gestureJson(old); const i = Number(index); if (i >= current.takes.length) throw new HttpError(404, 'take_not_found'); return tx.updateGlobalGesture(id, { ...current, takes: current.takes.filter((_, k) => k !== i), previews: current.previews.filter((_, k) => k !== i), now: now() }); }); globalChanged({ gesture: listJson(row) }); return { gesture: gestureJson(row) };
     }],
     ['DELETE', /^\/api\/admin\/gestures\/([0-9a-f-]{36})$/, async (req, [, id]) => { await admin(req); if (!(await store.deleteGlobalGesture(id))) throw new HttpError(404, 'gesture_not_found'); globalChanged({ removed: id }); return { ok: true }; }],
+    [
+      'DELETE',
+      /^\/api\/admin\/gestures$/,
+      async (req, _m, url) => {
+        await admin(req);
+        const setId = url.searchParams.get('setId');
+        if (!setId || !(await store.globalSetById(setId))) throw new HttpError(404, 'set_not_found');
+        const removed = await store.clearGlobalGestures(setId);
+        if (removed) globalChanged({ cleared: setId });
+        return { ok: true, removed };
+      },
+    ],
 
     // --- gesture sets and personal gestures (stored per account, used on every device) ---
     [
@@ -778,7 +790,7 @@ export function createApi({ store, hub, now = Date.now, env = process.env, trust
         const { user } = await authenticate(req);
         const setId = url.searchParams.get('setId') || undefined;
         const removed = await store.clearGestures(user.id, setId);
-        changed(user, { cleared: setId ?? null });
+        if (removed) changed(user, { cleared: setId ?? null });
         return { ok: true, removed };
       },
     ],

@@ -7,6 +7,7 @@ class FakeWorker {
   onmessage: ((event: { data: TrackerWorkerOut }) => void) | null = null;
   onerror = null;
   messages: TrackerWorkerIn[] = [];
+  terminated = false;
   constructor() {
     FakeWorker.last = this;
   }
@@ -20,7 +21,9 @@ class FakeWorker {
   reply(message: TrackerWorkerOut) {
     this.onmessage?.({ data: message });
   }
-  terminate() {}
+  terminate() {
+    this.terminated = true;
+  }
 }
 
 function video() {
@@ -97,5 +100,45 @@ it('rejects old worker results and old scheduled callbacks after a restart', asy
   });
   expect(newListener).toHaveBeenCalledTimes(1);
   expect(oldListener).not.toHaveBeenCalled();
+  tracker.dispose();
+});
+
+it('keeps the worker through transient capture and detection errors', async () => {
+  vi.stubGlobal('Worker', FakeWorker);
+  const bitmap = { close: vi.fn() };
+  const capture = vi.fn(() => Promise.resolve(bitmap));
+  capture.mockRejectedValueOnce(new Error('video frame unavailable'));
+  vi.stubGlobal('createImageBitmap', capture);
+  let now = 100;
+  vi.stubGlobal('performance', { now: () => now });
+  const tracker = await TrackerClient.create('hands_pose_lips');
+  const source = video();
+  const received = vi.fn();
+  tracker.start(source.element, received);
+  await Promise.resolve();
+  const worker = FakeWorker.last;
+
+  async function pushFrame() {
+    now += 33;
+    source.callbacks.shift()?.();
+    await Promise.resolve();
+  }
+
+  await pushFrame();
+  worker.reply({ type: 'frame-error', t: now, message: 'temporary detection failure' });
+  await pushFrame();
+  worker.reply({
+    type: 'landmarks',
+    t: now,
+    ms: 5,
+    poses: 1,
+    hands: 0,
+    frame: new Float32Array(1629),
+  });
+  await pushFrame();
+  worker.reply({ type: 'frame-error', t: now, message: 'temporary detection failure' });
+  expect(received).toHaveBeenCalledTimes(1);
+  expect(worker.messages.filter((m) => m.type === 'frame')).toHaveLength(3);
+  expect(worker.terminated).toBe(false);
   tracker.dispose();
 });

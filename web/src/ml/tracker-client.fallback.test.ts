@@ -68,7 +68,15 @@ it('closes a fallback tracker that finishes loading after the call ends', async 
   );
   const tracker = await TrackerClient.create('hands_pose_lips');
   const received = vi.fn();
-  tracker.start(readyVideo(), received);
+  const callbacks: VideoFrameRequestCallback[] = [];
+  const video = readyVideo();
+  video.requestVideoFrameCallback = (callback) => callbacks.push(callback);
+  tracker.start(video, received);
+  await Promise.resolve();
+  for (let i = 0; i < 2; i++) {
+    callbacks.shift()?.(0, {} as VideoFrameCallbackMetadata);
+    await Promise.resolve();
+  }
   await vi.waitFor(() => {
     expect(mocks.createTracker).toHaveBeenCalledTimes(1);
   });
