@@ -210,7 +210,7 @@ export class Session {
   /** Forget any half-seen sign, e.g. when switching modes. */
   resetRecognition(): void {
     this.recognizer?.reset();
-    this.set({ signing: false });
+    this.set({ signing: false, inferenceError: null });
   }
 
   private push(frame: Frame, t: number, poses: number, source: Source): void {
@@ -246,6 +246,7 @@ export class Session {
       paused: false,
       trackerError: null,
       status: null,
+      inferenceError: null,
     });
     // Usually already started by warmUp(); otherwise it starts while the permission prompt is open.
     const tracker = this.ensureTracker();

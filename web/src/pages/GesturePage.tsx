@@ -28,6 +28,7 @@ import {
   MAX_NAME_LENGTH,
   MAX_TAKES,
   MIN_TAKES,
+  gestureMeaning,
   isReady,
   type GestureMatch,
 } from '../ml/prototypes';
@@ -48,7 +49,6 @@ import bukvaLabels from '../../public/models/bukva/labels.json';
 type T = (ru: string, kk: string) => string;
 
 const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
-const lower = (s: string) => s.toLocaleLowerCase('ru');
 
 function TakeDots({ count }: { count: number }) {
   return (
@@ -164,7 +164,13 @@ function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
           </Button>
         )}
         {lib.isAdmin && !adding && !addingGlobal ? (
-          <Button size="sm" variant="ghost" onClick={() => setAddingGlobal(true)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setAddingGlobal(true);
+            }}
+          >
             <FolderPlus aria-hidden className="size-4" />
             {t('Общий набор', 'Ортақ жинақ')}
           </Button>
@@ -187,8 +193,13 @@ function SetBar({ lib, t }: { lib: LibrarySnapshot; t: T }) {
         <NameForm
           initial=""
           label={t('Название общего набора', 'Ортақ жинақ атауы')}
-          submit={async (name) => { const set = await library.createGlobalSet(name); library.setActiveSet(set.id); }}
-          onDone={() => setAddingGlobal(false)}
+          submit={async (name) => {
+            const set = await library.createGlobalSet(name);
+            library.setActiveSet(set.id);
+          }}
+          onDone={() => {
+            setAddingGlobal(false);
+          }}
         />
       ) : null}
       {active && !adding && !addingGlobal && canEditActive ? (
@@ -399,33 +410,37 @@ function GestureDetail({
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-2xl font-semibold tracking-tight">{gesture.name}</h3>
-          {canEdit ? <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setRenaming(true);
-            }}
-          >
-            <Pencil aria-hidden className="size-4" />
-            {t('Изменить значение', 'Мағынасын өзгерту')}
-          </Button> : null}
+          {canEdit ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRenaming(true);
+              }}
+            >
+              <Pencil aria-hidden className="size-4" />
+              {t('Изменить значение', 'Мағынасын өзгерту')}
+            </Button>
+          ) : null}
         </div>
       )}
-      {canEdit ? <label className="inline-setting">
-        <span>{t('Набор', 'Жинақ')}</span>
-        <select
-          value={gesture.setId ?? ''}
-          onChange={(e) => {
-            library.update(gesture.id, { setId: e.target.value }).catch(onError);
-          }}
-        >
-          {lib.sets.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </label> : null}
+      {canEdit ? (
+        <label className="inline-setting">
+          <span>{t('Набор', 'Жинақ')}</span>
+          <select
+            value={gesture.setId ?? ''}
+            onChange={(e) => {
+              library.update(gesture.id, { setId: e.target.value }).catch(onError);
+            }}
+          >
+            {lib.sets.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="flex items-center gap-2 text-sm text-ink-muted">
         <TakeDots count={gesture.takes.length} />
         <span>
@@ -440,92 +455,94 @@ function GestureDetail({
         </span>
       </div>
 
-      {canEdit ? <div className="flex flex-wrap gap-2">
-        {recording ? (
-          <Button
-            onClick={() => {
-              setArmed(null);
-            }}
-          >
-            <Square aria-hidden className="size-4" />
-            {t('Остановить запись', 'Жазуды тоқтату')}
-          </Button>
-        ) : gesture.takes.length < MAX_TAKES ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setArmed({ id: gesture.id, untilReady: !isReady(gesture) });
-            }}
-          >
-            <CircleDot aria-hidden className="size-4" />
-            {t('Записать повтор', 'Қайталау жазу')}
-          </Button>
-        ) : null}
-        {confirm === null ? (
-          <>
-            {gesture.takes.length ? (
+      {canEdit ? (
+        <div className="flex flex-wrap gap-2">
+          {recording ? (
+            <Button
+              onClick={() => {
+                setArmed(null);
+              }}
+            >
+              <Square aria-hidden className="size-4" />
+              {t('Остановить запись', 'Жазуды тоқтату')}
+            </Button>
+          ) : gesture.takes.length < MAX_TAKES ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setArmed({ id: gesture.id, untilReady: !isReady(gesture) });
+              }}
+            >
+              <CircleDot aria-hidden className="size-4" />
+              {t('Записать повтор', 'Қайталау жазу')}
+            </Button>
+          ) : null}
+          {confirm === null ? (
+            <>
+              {gesture.takes.length ? (
+                <Button
+                  onClick={() => {
+                    setConfirm('retake');
+                  }}
+                >
+                  <RotateCcw aria-hidden className="size-4" />
+                  {t('Перезаписать всё', 'Бәрін қайта жазу')}
+                </Button>
+              ) : null}
               <Button
+                variant="danger"
                 onClick={() => {
-                  setConfirm('retake');
+                  setConfirm('delete');
                 }}
               >
-                <RotateCcw aria-hidden className="size-4" />
-                {t('Перезаписать всё', 'Бәрін қайта жазу')}
+                <Trash2 aria-hidden className="size-4" />
+                {t('Удалить жест', 'Ымды жою')}
               </Button>
-            ) : null}
-            <Button
-              variant="danger"
-              onClick={() => {
-                setConfirm('delete');
-              }}
-            >
-              <Trash2 aria-hidden className="size-4" />
-              {t('Удалить жест', 'Ымды жою')}
-            </Button>
-          </>
-        ) : (
-          <span className="flex flex-wrap items-center gap-1 text-sm">
-            <span className="text-danger">
-              {confirm === 'retake'
-                ? t(
-                    'Удалить все повторы и записать заново?',
-                    'Барлық қайталауды жойып, қайта жазу керек пе?',
-                  )
-                : t('Удалить жест совсем?', 'Ымды толық жою керек пе?')}
+            </>
+          ) : (
+            <span className="flex flex-wrap items-center gap-1 text-sm">
+              <span className="text-danger">
+                {confirm === 'retake'
+                  ? t(
+                      'Удалить все повторы и записать заново?',
+                      'Барлық қайталауды жойып, қайта жазу керек пе?',
+                    )
+                  : t('Удалить жест совсем?', 'Ымды толық жою керек пе?')}
+              </span>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  const action = confirm;
+                  setConfirm(null);
+                  if (action === 'retake') {
+                    library
+                      .removeTake(gesture.id)
+                      .then(() => {
+                        setArmed({ id: gesture.id, untilReady: true });
+                      })
+                      .catch(onError);
+                  } else {
+                    setArmed(null);
+                    library.remove(gesture.id).then(onBack).catch(onError);
+                  }
+                }}
+              >
+                {t('Да', 'Иә')}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setConfirm(null);
+                }}
+              >
+                {t('Отмена', 'Болдырмау')}
+              </Button>
             </span>
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={() => {
-                const action = confirm;
-                setConfirm(null);
-                if (action === 'retake') {
-                  library
-                    .removeTake(gesture.id)
-                    .then(() => {
-                      setArmed({ id: gesture.id, untilReady: true });
-                    })
-                    .catch(onError);
-                } else {
-                  setArmed(null);
-                  library.remove(gesture.id).then(onBack).catch(onError);
-                }
-              }}
-            >
-              {t('Да', 'Иә')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setConfirm(null);
-              }}
-            >
-              {t('Отмена', 'Болдырмау')}
-            </Button>
-          </span>
-        )}
-      </div> : null}
+          )}
+        </div>
+      ) : null}
 
       <div aria-live="polite" data-testid="teach-status">
         {recording ? (
@@ -540,11 +557,11 @@ function GestureDetail({
           <div className="space-y-2">
             <p className="text-sm text-ink-muted">
               {t(
-                `Проверка: покажите «${gesture.name}» — увидите, как он распознаётся среди жестов набора.`,
-                `Тексеру: «${gesture.name}» ымын көрсетіңіз — ол жинақ ымдары арасында қалай танылатынын көресіз.`,
+                `Покажите «${gesture.name}» и ненадолго опустите руки, чтобы увидеть результат.`,
+                `Нәтижені көру үшін «${gesture.name}» ымын көрсетіп, қолыңызды сәл түсіріңіз.`,
               )}
             </p>
-            <MatchResult match={match} expected={gesture.id} compact />
+            <MatchResult match={match} expected={gesture.name} compact />
           </div>
         ) : null}
       </div>
@@ -561,7 +578,9 @@ function GestureDetail({
               index={i}
               quality={isReady(gesture) ? quality[i] : undefined}
               t={t}
-              onDelete={() => { if (canEdit) library.removeTake(gesture.id, i).catch(onError); }}
+              onDelete={() => {
+                if (canEdit) library.removeTake(gesture.id, i).catch(onError);
+              }}
             />
           ))}
         </ul>
@@ -611,7 +630,7 @@ function SetOverview({
     const trimmed = clean(name);
     const problem = !trimmed
       ? t('Напишите значение жеста.', 'Ымның мағынасын жазыңыз.')
-      : gestures.some((g) => lower(g.name) === lower(trimmed))
+      : gestures.some((g) => gestureMeaning(g.name) === gestureMeaning(trimmed))
         ? t('В этом наборе уже есть такой жест.', 'Бұл жинақта мұндай ым бар.')
         : gestures.length >= MAX_GESTURES
           ? t(`Не больше ${MAX_GESTURES} жестов.`, `${MAX_GESTURES} ымнан аспауы керек.`)
@@ -619,7 +638,8 @@ function SetOverview({
     setFormError(problem);
     if (problem) return;
     setBusy(true);
-    (currentSet?.scope === 'global' ? library.createGlobal(trimmed, setId) : library.create(trimmed, setId))
+    library
+      .create(trimmed, setId)
       .then((gesture) => {
         setName('');
         open(gesture.id);
@@ -637,36 +657,38 @@ function SetOverview({
   return (
     <div className="space-y-5">
       <h3 className="text-lg font-semibold">{setName_}</h3>
-      {canEdit ? <form onSubmit={add} className="space-y-1.5" noValidate>
-        <label htmlFor={inputId} className="block text-sm font-medium">
-          {t('Новый жест — что он значит', 'Жаңа ым — мағынасы')}
-        </label>
-        <div className="flex gap-2">
-          <input
-            id={inputId}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-            maxLength={MAX_NAME_LENGTH}
-            placeholder={t('Например: привет', 'Мысалы: сәлем')}
-            aria-invalid={formError ? true : undefined}
-            className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 text-sm placeholder:text-ink-muted/70"
-            disabled={busy}
-          />
-          <Button type="submit" variant="primary" disabled={busy}>
-            {t('Добавить', 'Қосу')}
-          </Button>
-        </div>
-        {formError ? <p className="text-sm text-danger">{formError}</p> : null}
-      </form> : null}
+      {canEdit ? (
+        <form onSubmit={add} className="space-y-1.5" noValidate>
+          <label htmlFor={inputId} className="block text-sm font-medium">
+            {t('Новый жест — что он значит', 'Жаңа ым — мағынасы')}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id={inputId}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
+              maxLength={MAX_NAME_LENGTH}
+              placeholder={t('Например: привет', 'Мысалы: сәлем')}
+              aria-invalid={formError ? true : undefined}
+              className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 text-sm placeholder:text-ink-muted/70"
+              disabled={busy}
+            />
+            <Button type="submit" variant="primary" disabled={busy}>
+              {t('Добавить', 'Қосу')}
+            </Button>
+          </div>
+          {formError ? <p className="text-sm text-danger">{formError}</p> : null}
+        </form>
+      ) : null}
 
       {ready.length ? (
         <div aria-live="polite" data-testid="teach-status" className="space-y-2">
           <p className="text-sm text-ink-muted">
             {t(
-              'Покажите любой жест набора, чтобы проверить, как он распознаётся.',
-              'Қалай танылатынын тексеру үшін жинақтың кез келген ымын көрсетіңіз.',
+              'Покажите жест из набора и ненадолго опустите руки, чтобы увидеть результат.',
+              'Нәтижені көру үшін жинақтан бір ымды көрсетіп, қолыңызды сәл түсіріңіз.',
             )}
           </p>
           <MatchResult match={match} compact />
@@ -791,6 +813,10 @@ function Editor({ session, lib, t }: { session: Session; lib: LibrarySnapshot; t
     setNotice(errorText(e, t));
   };
 
+  useEffect(() => {
+    session.resetRecognition();
+  }, [session]);
+
   useEffect(
     () =>
       session.onResult((result) => {
@@ -823,14 +849,7 @@ function Editor({ session, lib, t }: { session: Session; lib: LibrarySnapshot; t
   );
 
   const gestures = lib.gestures.filter((g) => g.setId === setId);
-  const opened = lib.gestures.find((g) => g.id === openId);
-  // Closing the open gesture when it was deleted or the set changed.
-  const [shownSet, setShownSet] = useState(setId);
-  if (shownSet !== setId) {
-    setShownSet(setId);
-    if (opened && opened.setId !== setId) setOpenId(null);
-    setMatch(null);
-  }
+  const opened = gestures.find((g) => g.id === openId);
 
   return (
     <div className="space-y-4">
@@ -913,8 +932,14 @@ export default function GesturePage({ session }: { session: Session }) {
                   void session.loadModel();
                 }}
               >
-                {() => <Editor session={session} lib={lib} t={t} />}
+                {() => <Editor key={lib.activeSetId} session={session} lib={lib} t={t} />}
               </ModelGate>
+              {snap.inferenceError ? (
+                <p role="alert">
+                  {t('Ошибка вычисления: ', 'Есептеу қатесі: ')}
+                  {snap.inferenceError}
+                </p>
+              ) : null}
             </Card>
           </div>
         </div>

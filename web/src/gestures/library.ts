@@ -19,6 +19,7 @@ import {
   MAX_TAKES,
   MIN_TAKES,
   cosine,
+  gestureMeaning,
   isReady,
   matchGesture,
   prototypeOf,
@@ -40,7 +41,7 @@ interface ApiGesture {
   previews?: (TakePreview | null)[];
   createdAt: number;
   updatedAt: number;
-  scope: 'personal' | 'global';
+  scope?: 'personal' | 'global';
 }
 
 /** A live update from the server (sent to every device of the account). */
@@ -194,16 +195,18 @@ export class GestureLibrary {
         '/gestures',
       );
       if (token !== this.loadToken) return;
+      // Older servers can include the same shared gesture in both lists.
+      const gestures = [...new Map(data.gestures.map((g) => [g.id, g])).values()];
       this.set({
         status: 'ready',
         sets: data.sets,
-        gestures: data.gestures.map((g) => this.fromApi(g, meta)),
+        gestures: gestures.map((g) => this.fromApi(g, meta)),
         activeSetId: this.pickActive(data.sets),
         isAdmin: !!messenger.getSnapshot().user?.isAdmin,
       });
       if (!this.migrated) {
         this.migrated = true;
-        void this.importLocal(data.gestures);
+        void this.importLocal(gestures);
       }
     } catch {
       if (token === this.loadToken) this.set({ status: 'error' });
@@ -275,7 +278,9 @@ export class GestureLibrary {
       this.set({ gestures: this.snapshot.gestures.filter((g) => g.id !== u.removed) });
     } else if (u.cleared !== undefined) {
       this.set({
-        gestures: this.snapshot.gestures.filter((g) => u.cleared !== null && g.setId !== u.cleared),
+        gestures: this.snapshot.gestures.filter((g) =>
+          u.cleared === null ? g.scope === 'global' : g.setId !== u.cleared,
+        ),
       });
     } else if (u.set) {
       const set = u.set;
@@ -351,16 +356,22 @@ export class GestureLibrary {
     return set;
   }
   async createGlobalSet(name: string): Promise<GestureSet> {
-    const { set } = await messenger.authed<{ set: GestureSet }>('POST', '/admin/gesture-sets', { name });
+    const { set } = await messenger.authed<{ set: GestureSet }>('POST', '/admin/gesture-sets', {
+      name,
+    });
     this.set({ sets: [...this.snapshot.sets, set] });
     return set;
   }
 
   async renameSet(id: string, name: string): Promise<void> {
     const global = this.snapshot.sets.find((s) => s.id === id)?.scope === 'global';
-    const { set } = await messenger.authed<{ set: GestureSet }>('PATCH', global ? `/admin/gesture-sets/${id}` : `/gesture-sets/${id}`, {
-      name,
-    });
+    const { set } = await messenger.authed<{ set: GestureSet }>(
+      'PATCH',
+      global ? `/admin/gesture-sets/${id}` : `/gesture-sets/${id}`,
+      {
+        name,
+      },
+    );
     this.set({ sets: this.snapshot.sets.map((s) => (s.id === id ? set : s)) });
   }
 
@@ -379,7 +390,9 @@ export class GestureLibrary {
   // --- gestures ---------------------------------------------------------------
   async create(name: string, setId: string): Promise<LibraryGesture> {
     const modelVersion = await this.modelVersion();
-    const { gesture } = await messenger.authed<{ gesture: ApiGesture }>('POST', '/gestures', {
+    const global = this.snapshot.sets.find((s) => s.id === setId)?.scope === 'global';
+    const path = global ? '/admin/gestures' : '/gestures';
+    const { gesture } = await messenger.authed<{ gesture: ApiGesture }>('POST', path, {
       setId,
       name,
       modelVersion,
@@ -392,16 +405,10 @@ export class GestureLibrary {
         previewsLoaded: true,
         durations: [],
         stale: false,
+        scope: gesture.scope ?? 'personal',
         readOnly: gesture.scope === 'global' && !messenger.getSnapshot().user?.isAdmin,
       }
     );
-  }
-
-  /** Admin-only variants use the shared-library API. */
-  async createGlobal(name: string, setId: string): Promise<LibraryGesture> {
-    const modelVersion = await this.modelVersion();
-    const { gesture } = await messenger.authed<{ gesture: ApiGesture }>('POST', '/admin/gestures', { setId, name, modelVersion });
-    return this.replace(gesture)!;
   }
 
   async addTake(
@@ -435,19 +442,28 @@ export class GestureLibrary {
   async update(id: string, patch: { name?: string; setId?: string }): Promise<void> {
     const { gesture } = await messenger.authed<{ gesture: ApiGesture }>(
       'PATCH',
-      this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global' ? `/admin/gestures/${id}` : `/gestures/${id}`,
+      this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global'
+        ? `/admin/gestures/${id}`
+        : `/gestures/${id}`,
       patch,
     );
     this.replace(gesture);
   }
 
   async remove(id: string): Promise<void> {
-    await messenger.authed('DELETE', this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global' ? `/admin/gestures/${id}` : `/gestures/${id}`);
+    await messenger.authed(
+      'DELETE',
+      this.snapshot.gestures.find((g) => g.id === id)?.scope === 'global'
+        ? `/admin/gestures/${id}`
+        : `/gestures/${id}`,
+    );
     this.set({ gestures: this.snapshot.gestures.filter((g) => g.id !== id) });
   }
 
   async clear(setId: string): Promise<void> {
-    await messenger.authed('DELETE', `/gestures?setId=${encodeURIComponent(setId)}`);
+    const global = this.snapshot.sets.find((s) => s.id === setId)?.scope === 'global';
+    const path = global ? '/admin/gestures' : '/gestures';
+    await messenger.authed('DELETE', `${path}?setId=${encodeURIComponent(setId)}`);
     this.set({ gestures: this.snapshot.gestures.filter((g) => g.setId !== setId) });
   }
 
@@ -519,7 +535,10 @@ export class GestureLibrary {
    * its own takes is "weak". Both are worth deleting and recording again.
    */
   quality(gesture: LibraryGesture): TakeQuality[] {
-    const others = this.gesturesIn(gesture.setId).filter((g) => g.id !== gesture.id && isReady(g));
+    const meaning = gestureMeaning(gesture.name);
+    const others = this.gesturesIn(gesture.setId).filter(
+      (g) => isReady(g) && gestureMeaning(g.name) !== meaning,
+    );
     const protos = others.map((g) => ({ name: g.name, proto: prototypeOf(g.takes) }));
     const rows = gesture.takes.map((take, i) => {
       const rest = gesture.takes.filter((_, k) => k !== i);

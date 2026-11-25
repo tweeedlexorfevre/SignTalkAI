@@ -666,12 +666,6 @@ details > summary {
   min-height: 50px;
   text-align: left;
 }
-.tab-index {
-  margin-right: 10px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--signal);
-}
 .auth-field input {
   min-height: 54px;
   border: var(--rule-soft);
@@ -1515,9 +1509,6 @@ details > summary {
 .panel-section h3 svg {
   display: none;
 }
-.panel-index {
-  color: var(--signal);
-}
 .call-panel .muted {
   color: var(--ink-muted);
 }
@@ -1690,6 +1681,7 @@ details > summary {
 }
 .conversation-toolbar .text-link {
   align-self: center;
+  color: var(--ink);
 }
 .native-grid {
   gap: 0;

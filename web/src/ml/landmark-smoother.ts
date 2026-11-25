@@ -4,8 +4,8 @@
  * A fixed moving average makes a signing hand visibly lag behind the video.
  * This is a small One Euro filter instead: stationary landmarks are strongly
  * smoothed, while the cut-off rises with movement so intentional gestures stay
- * responsive. Missing landmarks remain missing; we never invent a hand or a
- * face point for the recogniser.
+ * responsive. Missing landmarks remain missing so the overlay never draws
+ * a hand or a face point the tracker could not see.
  */
 import { FRAME_LENGTH, type Frame } from './landmarks';
 
@@ -83,7 +83,10 @@ export class LandmarkSmoother {
       const derivativeAlpha = alpha(this.options.derivativeCutoff, dt);
       const derivative =
         derivativeAlpha * rawDerivative + (1 - derivativeAlpha) * (this.derivatives[i] ?? 0);
-      const positionAlpha = alpha(this.options.minCutoff + this.options.beta * Math.abs(derivative), dt);
+      const positionAlpha = alpha(
+        this.options.minCutoff + this.options.beta * Math.abs(derivative),
+        dt,
+      );
       const filtered = positionAlpha * next + (1 - positionAlpha) * previous;
       this.values[i] = filtered;
       this.derivatives[i] = derivative;

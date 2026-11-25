@@ -13,6 +13,9 @@ export interface TrackerFrame extends TrackedFrame {
   ms: number;
 }
 
+/** A transient capture or detection error should only drop that frame. */
+const MAX_CONSECUTIVE_FRAME_ERRORS = 3;
+
 async function createPageTracker(featureSet: FeatureSet): Promise<Tracker> {
   const { createTracker } = await import('./tracker-core');
   return createTracker({ featureSet, delegate: 'GPU' });
@@ -22,6 +25,7 @@ export class TrackerClient {
   private running = false;
   private disposed = false;
   private busy = false;
+  private frameErrors = 0;
   private generation = 0;
   private startedAt = 0;
   private onFrame: ((frame: TrackerFrame) => void) | null = null;
@@ -40,10 +44,13 @@ export class TrackerClient {
       const msg = event.data;
       if (msg.type === 'landmarks') {
         this.busy = false;
-        if (this.running && msg.t >= this.startedAt)
+        if (this.running && msg.t >= this.startedAt) {
+          this.frameErrors = 0;
           this.onFrame?.({ frame: msg.frame, t: msg.t, poses: msg.poses, ms: msg.ms });
+        }
       } else if (msg.type === 'frame-error') {
-        this.fallbackToMainThread(worker);
+        this.busy = false;
+        if (this.running && msg.t >= this.startedAt) this.onWorkerFrameError(worker);
       }
     };
     worker.onerror = worker.onmessageerror = () => {
@@ -129,6 +136,7 @@ export class TrackerClient {
   stop(): void {
     this.generation++;
     this.running = false;
+    this.frameErrors = 0;
     this.onFrame = null;
     this.onError = null;
   }
@@ -175,8 +183,13 @@ export class TrackerClient {
       bitmap?.close();
       if (this.worker !== worker) return;
       this.busy = false;
-      if (this.running && generation === this.generation) this.fallbackToMainThread(worker);
+      if (this.running && generation === this.generation) this.onWorkerFrameError(worker);
     }
+  }
+
+  private onWorkerFrameError(worker: Worker): void {
+    this.frameErrors++;
+    if (this.frameErrors >= MAX_CONSECUTIVE_FRAME_ERRORS) this.fallbackToMainThread(worker);
   }
 
   private fallbackToMainThread(worker: Worker): void {

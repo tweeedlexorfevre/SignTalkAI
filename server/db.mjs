@@ -124,21 +124,21 @@ export class Store {
       setById: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE owner_id = ? AND id = ? AND scope = 'personal'"),
       insertSet: q('INSERT INTO gesture_sets (id, owner_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'),
       renameSet: q('UPDATE gesture_sets SET name = ?, updated_at = ? WHERE owner_id = ? AND id = ?'),
-      deleteSetGestures: q('DELETE FROM gestures WHERE owner_id = ? AND set_id = ?'),
+      deleteSetGestures: q("DELETE FROM gestures WHERE owner_id = ? AND set_id = ? AND scope = 'personal'"),
       deleteSet: q('DELETE FROM gesture_sets WHERE owner_id = ? AND id = ?'),
-      adoptOrphans: q('UPDATE gestures SET set_id = ? WHERE owner_id = ? AND set_id IS NULL'),
+      adoptOrphans: q("UPDATE gestures SET set_id = ? WHERE owner_id = ? AND set_id IS NULL AND scope = 'personal'"),
 
-      gestureNames: q('SELECT id, set_id, name FROM gestures WHERE owner_id = ?'),
-      gesturesOf: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? ORDER BY created_at, id`),
-      gestureById: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? AND id = ?`),
+      gestureNames: q("SELECT id, set_id, name FROM gestures WHERE owner_id = ? AND scope = 'personal'"),
+      gesturesOf: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? AND scope = 'personal' ORDER BY created_at, id`),
+      gestureById: q(`SELECT ${gestureColumns} FROM gestures WHERE owner_id = ? AND id = ? AND scope = 'personal'`),
       insertGesture: q(
         'INSERT INTO gestures (id, owner_id, set_id, name, model_version, takes, previews, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       ),
       updateGesture: q(
-        'UPDATE gestures SET set_id = ?, name = ?, model_version = ?, takes = ?, previews = ?, updated_at = ? WHERE owner_id = ? AND id = ?',
+        "UPDATE gestures SET set_id = ?, name = ?, model_version = ?, takes = ?, previews = ?, updated_at = ? WHERE owner_id = ? AND id = ? AND scope = 'personal'",
       ),
-      deleteGesture: q('DELETE FROM gestures WHERE owner_id = ? AND id = ?'),
-      clearGestures: q('DELETE FROM gestures WHERE owner_id = ?'),
+      deleteGesture: q("DELETE FROM gestures WHERE owner_id = ? AND id = ? AND scope = 'personal'"),
+      clearGestures: q("DELETE FROM gestures WHERE owner_id = ? AND scope = 'personal'"),
       globalSets: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE scope = 'global' ORDER BY created_at, id"),
       globalSetById: q("SELECT id, name, created_at, updated_at, scope FROM gesture_sets WHERE id = ? AND scope = 'global'"),
       insertGlobalSet: q("INSERT INTO gesture_sets (id, owner_id, name, scope, created_at, updated_at) VALUES (?, ?, ?, 'global', ?, ?)") ,
@@ -150,6 +150,7 @@ export class Store {
       insertGlobalGesture: q("INSERT INTO gestures (id, owner_id, set_id, name, model_version, takes, previews, scope, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'global', ?, ?)") ,
       updateGlobalGesture: q("UPDATE gestures SET set_id = ?, name = ?, model_version = ?, takes = ?, previews = ?, updated_at = ? WHERE id = ? AND scope = 'global'"),
       deleteGlobalGesture: q("DELETE FROM gestures WHERE id = ? AND scope = 'global'"),
+      clearGlobalGestures: q("DELETE FROM gestures WHERE set_id = ? AND scope = 'global'"),
     };
   }
 
@@ -355,4 +356,5 @@ export class Store {
   insertGlobalGesture({ id, ownerId, setId, name, modelVersion, takes, previews, now }) { this.s.insertGlobalGesture.run(id, ownerId, setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, now); return this.globalGestureById(id); }
   updateGlobalGesture(id, { setId, name, modelVersion, takes, previews, now }) { this.s.updateGlobalGesture.run(setId, name, modelVersion, JSON.stringify(takes), JSON.stringify(previews), now, id); return this.globalGestureById(id); }
   deleteGlobalGesture(id) { return this.s.deleteGlobalGesture.run(id).changes > 0; }
+  clearGlobalGestures(setId) { return Number(this.s.clearGlobalGestures.run(setId).changes); }
 }

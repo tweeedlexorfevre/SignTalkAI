@@ -19,7 +19,6 @@ import { assembleFrame, type DetectedHand } from './assemble';
 import { assetUrl } from './assets';
 import type { FeatureSet } from './features';
 import type { Frame } from './landmarks';
-import { LandmarkSmoother } from './landmark-smoother';
 
 export type Delegate = 'GPU' | 'CPU';
 
@@ -100,7 +99,6 @@ async function handsAndPose(
     // Two, so a second person in view is noticed (and recognition pauses).
     numPoses: 2,
   });
-  const smoother = new LandmarkSmoother();
   return {
     delegate,
     detect(image: Image, t: number): Detected {
@@ -112,10 +110,7 @@ async function handsAndPose(
       }));
       const firstPose = p.landmarks[0];
       return {
-        frame: smoother.filter(
-          assembleFrame({ hands, pose: firstPose ? points(firstPose) : null }),
-          t,
-        ),
+        frame: assembleFrame({ hands, pose: firstPose ? points(firstPose) : null }),
         poses: p.landmarks.length,
         hands: hands.length,
       };
@@ -133,7 +128,6 @@ async function holistic(delegate: Delegate, task: Prefetched): Promise<Tracker> 
     baseOptions: { modelAssetBuffer: task.stream(), delegate },
     runningMode: 'VIDEO',
   });
-  const smoother = new LandmarkSmoother();
   return {
     delegate,
     detect(image: Image, t: number): Detected {
@@ -146,14 +140,11 @@ async function holistic(delegate: Delegate, task: Prefetched): Promise<Tracker> 
       const pose = r.poseLandmarks[0];
       const face = r.faceLandmarks[0];
       return {
-        frame: smoother.filter(
-          assembleFrame({
-            hands,
-            pose: pose ? points(pose) : null,
-            face: face ? points(face) : null,
-          }),
-          t,
-        ),
+        frame: assembleFrame({
+          hands,
+          pose: pose ? points(pose) : null,
+          face: face ? points(face) : null,
+        }),
         poses: r.poseLandmarks.length,
         hands: hands.length,
       };
