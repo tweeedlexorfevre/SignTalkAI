@@ -163,9 +163,6 @@ export default function AuthPage() {
               switchMode('login');
             }}
           >
-            <span className="tab-index" aria-hidden>
-              01
-            </span>
             {t('Вход', 'Кіру')}
           </button>
           <button
@@ -175,9 +172,6 @@ export default function AuthPage() {
               switchMode('register');
             }}
           >
-            <span className="tab-index" aria-hidden>
-              02
-            </span>
             {t('Регистрация', 'Тіркелу')}
           </button>
         </div>
