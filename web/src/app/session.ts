@@ -287,10 +287,19 @@ export class Session {
     try {
       const client = await tracker;
       if (token !== this.startToken || this.snapshot.source !== 'camera') return;
-      client.start(video, (f) => {
-        mark('first-landmarks');
-        this.push(f.frame, f.t, f.poses, 'camera');
-      });
+      client.start(
+        video,
+        (f) => {
+          mark('first-landmarks');
+          this.push(f.frame, f.t, f.poses, 'camera');
+        },
+        (error) => {
+          if (token !== this.startToken) return;
+          client.dispose();
+          this.tracker = null;
+          this.set({ trackerError: `Hand tracking could not start: ${error.message}` });
+        },
+      );
     } catch (error) {
       if (token !== this.startToken) return;
       this.set({

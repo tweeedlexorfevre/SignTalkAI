@@ -170,26 +170,23 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
   const hasLocalVideo = !!call.localStream?.getVideoTracks().length;
   const hasRemoteVideo = !!call.remoteStream?.getVideoTracks().length;
 
-  // Messages exchanged during this call (the chat may still be loading when the call starts).
-  const [baseline, setBaseline] = useState<number | null>(() => {
+  // Capture the state before loading history so a slow response cannot hide live messages.
+  const [{ lastKnownId, historyWasLoaded }] = useState(() => {
     const current = messenger.chat(peer.id);
-    return current.loaded ? (current.messages.at(-1)?.id ?? 0) : null;
+    return { lastKnownId: current.messages.at(-1)?.id ?? 0, historyWasLoaded: current.loaded };
   });
   useEffect(() => {
-    if (baseline !== null) return;
-    void messenger
-      .loadHistory(peer.id)
-      .catch(() => undefined)
-      .then(() => {
-        setBaseline(messenger.chat(peer.id).messages.at(-1)?.id ?? 0);
-      });
-  }, [baseline, peer.id]);
+    if (!historyWasLoaded) void messenger.loadHistory(peer.id).catch(() => undefined);
+  }, [historyWasLoaded, peer.id]);
   const transcript = useMemo<Message[]>(
     () =>
-      baseline === null || !chat
-        ? []
-        : chat.messages.filter((m) => m.id > baseline && m.kind !== 'call'),
-    [chat, baseline],
+      chat?.messages.filter(
+        (m) =>
+          m.id > lastKnownId &&
+          m.kind !== 'call' &&
+          (historyWasLoaded || messenger.arrivedAt(m.id) !== undefined),
+      ) ?? [],
+    [chat, historyWasLoaded, lastKnownId],
   );
   const lastPeer = transcript.findLast((m) => m.from === peer.id);
   const lastPeerId = lastPeer?.id;
@@ -959,5 +956,5 @@ export default function CallOverlay() {
   const call = useCall();
   if (call.phase === 'idle' || !call.peer) return null;
   if (call.phase === 'incoming') return <IncomingCall peer={call.peer} />;
-  return <CallScreen call={call} peer={call.peer} />;
+  return <CallScreen key={call.callId} call={call} peer={call.peer} />;
 }

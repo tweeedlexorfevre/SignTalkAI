@@ -51,14 +51,11 @@ export const MODELS = [
 const COPIES = [
   ['@mediapipe/tasks-vision/wasm/vision_wasm_module_internal.js', 'mediapipe/wasm'],
   ['@mediapipe/tasks-vision/wasm/vision_wasm_module_internal.wasm', 'mediapipe/wasm'],
-  ['onnxruntime-web/dist/ort-wasm-simd-threaded.mjs', 'ort'],
-  ['onnxruntime-web/dist/ort-wasm-simd-threaded.wasm', 'ort'],
-];
-
-// Classic (non-module) MediaPipe glue, only for the main-thread benchmark page.
-const BENCH_COPIES = [
+  // Browsers that cannot send camera frames to a worker use the classic runtime.
   ['@mediapipe/tasks-vision/wasm/vision_wasm_internal.js', 'mediapipe/wasm'],
   ['@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm', 'mediapipe/wasm'],
+  ['onnxruntime-web/dist/ort-wasm-simd-threaded.mjs', 'ort'],
+  ['onnxruntime-web/dist/ort-wasm-simd-threaded.wasm', 'ort'],
 ];
 
 async function sha256(path) {
@@ -142,14 +139,9 @@ async function main() {
     const how = await fetchModel(model);
     console.log(`${how.padEnd(10)} mediapipe/models/${model.file}`);
   }
-  if (!bench) {
-    for (const [source, folder] of BENCH_COPIES) {
-      await rm(join(VENDOR, folder, source.split('/').pop()), { force: true });
-    }
-  }
   // Start the onnxruntime folder afresh, so runtimes that no longer ship do not linger.
   await rm(join(VENDOR, 'ort'), { recursive: true, force: true });
-  for (const [source, folder] of bench ? [...COPIES, ...BENCH_COPIES] : COPIES) {
+  for (const [source, folder] of COPIES) {
     const from = join(ROOT, 'node_modules', source);
     const to = join(VENDOR, folder, source.split('/').pop());
     await mkdir(dirname(to), { recursive: true });

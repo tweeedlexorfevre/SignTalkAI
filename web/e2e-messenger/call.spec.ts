@@ -1,4 +1,11 @@
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import { expectAccessible } from '../e2e/fixtures';
 
 /**
@@ -6,8 +13,12 @@ import { expectAccessible } from '../e2e/fixtures';
  * never settles), so the microphone is replaced by a synthetic WebAudio tone.
  * The camera stays Chromium's fake video device.
  */
-async function newMediaContext(browser: Browser): Promise<BrowserContext> {
-  const context = await browser.newContext({ permissions: ['camera', 'microphone'] });
+async function newMediaContext(browser: Browser, mobile = false): Promise<BrowserContext> {
+  const context = await browser.newContext({
+    ...(mobile ? devices['iPhone 13'] : {}),
+    permissions: ['camera', 'microphone'],
+    reducedMotion: 'reduce',
+  });
   await context.addInitScript(() => {
     const devices = navigator.mediaDevices;
     const original = devices.getUserMedia.bind(devices);
@@ -26,18 +37,48 @@ async function newMediaContext(browser: Browser): Promise<BrowserContext> {
       return stream;
     };
   });
+  if (mobile) {
+    await context.addInitScript(() => {
+      const create = window.createImageBitmap.bind(window);
+      window.createImageBitmap = (source: ImageBitmapSource, ...args: unknown[]) => {
+        if (source instanceof HTMLVideoElement) {
+          throw new DOMException('Video ImageBitmap unavailable', 'NotSupportedError');
+        }
+        return Reflect.apply(create, window, [source, ...args]) as Promise<ImageBitmap>;
+      };
+      // The wrapper forwards the WebGL context with Reflect.apply.
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const upload = WebGL2RenderingContext.prototype.texImage2D;
+      WebGL2RenderingContext.prototype.texImage2D = function (
+        this: WebGL2RenderingContext,
+        ...args: unknown[]
+      ) {
+        if (
+          !performance.getEntriesByName('call-landmark-frame').length &&
+          args.some((arg) => arg instanceof HTMLVideoElement && arg.closest('.self-view'))
+        )
+          performance.mark('call-landmark-frame');
+        Reflect.apply(upload, this, args);
+      };
+    });
+  }
   return context;
 }
 
-async function register(browser: Browser, username: string, name: string) {
-  const context = await newMediaContext(browser);
+async function register(
+  browser: Browser,
+  username: string,
+  name: string,
+  { mobile = false, auditAccessibility = false } = {},
+) {
+  const context = await newMediaContext(browser, mobile);
   const page = await context.newPage();
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('./#chats');
-  await expectAccessible(page);
+  if (auditAccessibility) await expectAccessible(page);
   await page.getByRole('button', { name: 'Регистрация', exact: true }).click();
-  await expectAccessible(page);
+  if (auditAccessibility) await expectAccessible(page);
   await page.getByLabel('Ваше имя (видно собеседникам)').fill(name);
   await page.getByLabel('Имя пользователя для входа').fill(username);
   await page.getByLabel('Пароль', { exact: true }).fill(`${username}-password`);
@@ -46,6 +87,15 @@ async function register(browser: Browser, username: string, name: string) {
   expect(id).toMatch(/^ST-[A-HJ-NP-Z2-9]{6}$/);
   await expect(page.locator('.conn-state')).toHaveText('онлайн');
   return { context, page, id, errors };
+}
+
+async function sendRecognizedSign(page: Page, peerId: string, body: string) {
+  const token = await page.evaluate(() => localStorage.getItem('signtalk.token'));
+  const response = await page.request.post(`/api/chats/${peerId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { kind: 'sign', body },
+  });
+  await expect(response).toBeOK();
 }
 
 async function login(browser: Browser, loginName: string) {
@@ -71,8 +121,8 @@ async function remoteVideoPlaying(page: Page) {
 test('two people chat by unique ID, then talk on a video call with live sign translation', async ({
   browser,
 }) => {
-  const alice = await register(browser, 'alice', 'Алия');
-  const bob = await register(browser, 'bob', 'Болат');
+  const alice = await register(browser, 'alice', 'Алия', { auditAccessibility: true });
+  const bob = await register(browser, 'bob', 'Болат', { auditAccessibility: true });
 
   // Bob finds Alice by her unique ID and writes to her.
   await bob.page.getByLabel('ID или имя пользователя собеседника').fill(alice.id.toLowerCase());
@@ -153,4 +203,68 @@ test('two people chat by unique ID, then talk on a video call with live sign tra
 
   expect([...alice.errors, ...bob.errors]).toEqual([]);
   await Promise.all([alice.context.close(), bob.context.close(), alice2.context.close()]);
+});
+
+test('mobile fallback processes live camera frames and receives signs while history is loading', async ({
+  browser,
+}) => {
+  const desktop = await register(browser, 'desktop', 'Айжан');
+  const phone = await register(browser, 'phone', 'Арман', { mobile: true });
+  const historyPath = `**/api/chats/${desktop.id}/messages?*`;
+  let releaseHistory!: () => void;
+  const history = new Promise<void>((resolve) => {
+    releaseHistory = resolve;
+  });
+  await sendRecognizedSign(desktop.page, phone.id, 'Из предыдущего разговора');
+  await phone.page.reload();
+  await expect(phone.page.locator('.conn-state')).toHaveText('онлайн');
+  await expect(phone.page.locator('.contact-row', { hasText: 'Айжан' })).toBeVisible();
+  await phone.page.route(historyPath, async (route) => {
+    const response = await route.fetch();
+    await history;
+    await route.fulfill({ response });
+  });
+
+  try {
+    const historyRequested = phone.page.waitForRequest(historyPath);
+    await desktop.page.locator('.contact-row', { hasText: 'Арман' }).click();
+    await desktop.page.locator('.call-button').click();
+    await phone.page.getByRole('alertdialog').getByRole('button', { name: 'Ответить' }).click();
+    await historyRequested;
+    await Promise.all([remoteVideoPlaying(phone.page), remoteVideoPlaying(desktop.page)]);
+
+    // Check the real MediaPipe fallback with the fake camera, and inject the resulting text
+    // at the message API so the delivery assertion does not depend on a person signing.
+    await expect
+      .poll(
+        () => phone.page.evaluate(() => performance.getEntriesByName('call-landmark-frame').length),
+        { timeout: 60_000 },
+      )
+      .toBeGreaterThan(0);
+    await expect(phone.page.locator('.hands-chip')).toContainText('покажите руки');
+
+    await sendRecognizedSign(desktop.page, phone.id, 'Жест с ноутбука');
+    const subtitle = phone.page.locator('.subtitles .kind-sign');
+    await expect(subtitle).toHaveText('Жест с ноутбука');
+    await expect(subtitle).toBeInViewport();
+
+    const historyLoaded = phone.page.waitForResponse(historyPath);
+    releaseHistory();
+    await historyLoaded;
+    await phone.page.getByRole('button', { name: 'Панель перевода и чата' }).click();
+    await expect(phone.page.locator('.transcript li')).toHaveText(['Жест с ноутбука']);
+
+    await sendRecognizedSign(phone.page, desktop.id, 'Жест с телефона');
+    await expect(desktop.page.locator('.subtitles .kind-sign')).toHaveText('Жест с телефона');
+    await phone.page.getByRole('button', { name: 'Закрыть панель' }).click();
+    await desktop.page.getByRole('button', { name: 'Завершить звонок' }).click();
+    await phone.page.getByRole('button', { name: 'Закрыть', exact: true }).click();
+    await phone.page.locator('.contact-row', { hasText: 'Айжан' }).click();
+    await expect(phone.page.locator('.bubble-row', { hasText: 'Жест с ноутбука' })).toHaveCount(1);
+    await expect(phone.page.locator('.bubble-row', { hasText: 'Жест с телефона' })).toHaveCount(1);
+    expect([...desktop.errors, ...phone.errors]).toEqual([]);
+  } finally {
+    releaseHistory();
+    await Promise.all([desktop.context.close(), phone.context.close()]);
+  }
 });

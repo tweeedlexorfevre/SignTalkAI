@@ -71,38 +71,54 @@ export class LiveTranslator {
     this.emit({ type: 'state', state: 'loading' });
     if (this.kind === 'bukva') return this.startBukva();
     try {
-      const meta = await loadMeta().catch(() => ({ featureSet: 'hands_pose_lips' as const }));
-      const trackerPromise = TrackerClient.create(meta.featureSet);
-      await library.prepare();
-      const loaded = await ModelClient.load();
-      const spotter = new GestureSpotter(loaded.meta, {
-        infer: (input) => loaded.client.infer(input),
-        index: () => library.spotIndex(),
-        matchBurst: (embedding) => library.match(embedding),
-        emit: (event) => {
-          this.onSpot(event);
-        },
-      });
-      this.personal = { loaded, spotter };
-      const tracker = await trackerPromise;
-      if (this.stopped) {
-        tracker.dispose();
-        return;
-      }
-      this.tracker = tracker;
-      tracker.start(this.video, (f) => {
-        this.onFrame(f.frame, f.t);
-      });
+      await Promise.all([
+        loadMeta()
+          .then((meta) => TrackerClient.create(meta.featureSet))
+          .then((tracker) => {
+            if (this.stopped) tracker.dispose();
+            else this.tracker = tracker;
+          }),
+        library.prepare(),
+        ModelClient.load().then((loaded) => {
+          if (this.stopped) {
+            loaded.client.dispose();
+            return;
+          }
+          const spotter = new GestureSpotter(loaded.meta, {
+            infer: (input) => loaded.client.infer(input),
+            index: () => library.spotIndex(),
+            matchBurst: (embedding) => library.match(embedding),
+            emit: (event) => {
+              this.onSpot(event);
+            },
+          });
+          this.personal = { loaded, spotter };
+        }),
+      ]);
+      if (this.stopped || !this.tracker) return;
       this.emit({ type: 'state', state: 'ready' });
+      this.tracker.start(
+        this.video,
+        (f) => {
+          this.onFrame(f.frame, f.t);
+        },
+        (error) => {
+          this.fail(error);
+        },
+      );
     } catch (error) {
-      if (!this.stopped)
-        this.emit({
-          type: 'state',
-          state: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
-      this.stop();
+      this.fail(error);
     }
+  }
+
+  private fail(error: unknown): void {
+    if (this.stopped) return;
+    this.emit({
+      type: 'state',
+      state: 'error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+    this.stop();
   }
 
   stop(): void {
@@ -137,8 +153,10 @@ export class LiveTranslator {
   }
 
   private async startBukva(): Promise<void> {
-    const model = new LocalModel();
+    let loading: LocalModel | undefined;
     try {
+      const model = new LocalModel();
+      loading = model;
       const loaded = await model.load('bukva');
       if (this.stopped) {
         model.dispose();
@@ -151,27 +169,15 @@ export class LiveTranslator {
           this.onLetters(guesses);
         },
         (error) => {
-          if (this.stopped) return;
-          this.emit({
-            type: 'state',
-            state: 'error',
-            message: error instanceof Error ? error.message : String(error),
-          });
-          this.stop();
+          this.fail(error);
         },
       );
       this.bukva = { model, ...loaded, sampler };
       sampler.start();
       this.emit({ type: 'state', state: 'ready' });
     } catch (error) {
-      model.dispose();
-      if (!this.stopped)
-        this.emit({
-          type: 'state',
-          state: 'error',
-          message: error instanceof Error ? error.message : String(error),
-        });
-      this.stop();
+      loading?.dispose();
+      this.fail(error);
     }
   }
 

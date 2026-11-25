@@ -28,6 +28,6 @@ export default defineConfig({
     url: `http://localhost:${PORT}/healthz`,
     reuseExistingServer: false,
     timeout: 30_000,
-    env: { PORT: String(PORT), DATABASE_PATH: ':memory:' },
+    env: { PORT: String(PORT), DATABASE_PATH: ':memory:', DATABASE_URL: '' },
   },
 });

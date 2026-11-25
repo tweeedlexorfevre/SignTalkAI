@@ -369,8 +369,9 @@ export class Messenger {
     if (!me) return;
     if (!this.arrivals.has(message.id)) this.arrivals.set(message.id, Date.now());
     const peer = message.from === me ? message.to : message.from;
-    const chat = this.snapshot.chats[peer];
-    if (chat?.loaded) this.setChat(peer, { messages: mergeMessages(chat.messages, [message]) });
+    const chat = this.chat(peer);
+    // Live messages can arrive while the first history request is still in flight.
+    this.setChat(peer, { messages: mergeMessages(chat.messages, [message]) });
     const incoming = message.from === peer;
     if (incoming) this.setTyping(peer, false);
     if (!this.contact(peer)) {

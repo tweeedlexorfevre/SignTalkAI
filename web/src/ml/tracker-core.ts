@@ -45,7 +45,7 @@ type Image = ImageBitmap | HTMLVideoElement;
 /**
  * In a module worker MediaPipe loads its WASM glue with import(), which needs
  * the ES-module build; on the main thread it injects a classic <script>,
- * which needs the classic build (only the dev benchmark does that).
+ * which needs the classic build.
  */
 const useModule = typeof document === 'undefined';
 
@@ -112,7 +112,10 @@ async function handsAndPose(
       }));
       const firstPose = p.landmarks[0];
       return {
-        frame: smoother.filter(assembleFrame({ hands, pose: firstPose ? points(firstPose) : null }), t),
+        frame: smoother.filter(
+          assembleFrame({ hands, pose: firstPose ? points(firstPose) : null }),
+          t,
+        ),
         poses: p.landmarks.length,
         hands: hands.length,
       };
