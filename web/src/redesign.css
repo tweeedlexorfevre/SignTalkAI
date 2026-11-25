@@ -1509,9 +1509,6 @@ details > summary {
 .panel-section h3 svg {
   display: none;
 }
-.panel-index {
-  color: var(--signal);
-}
 .call-panel .muted {
   color: var(--ink-muted);
 }

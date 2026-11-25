@@ -647,9 +647,6 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
 
         <section className="panel-section">
           <h3>
-            <span className="panel-index" aria-hidden>
-              01
-            </span>
             <Hand size={16} aria-hidden /> {t('Жесты → текст', 'Ым → мәтін')}
           </h3>
           <label className="switch-row">
@@ -819,9 +816,6 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
 
         <section className="panel-section">
           <h3>
-            <span className="panel-index" aria-hidden>
-              02
-            </span>
             <Captions size={16} aria-hidden /> {t('Речь и озвучивание', 'Сөйлеу және дыбыстау')}
           </h3>
           <label className="switch-row">
@@ -874,9 +868,6 @@ function CallScreen({ call, peer }: { call: CallSnapshot; peer: User }) {
 
         <section className="panel-section transcript-section">
           <h3>
-            <span className="panel-index" aria-hidden>
-              03
-            </span>
             <MessageCircle size={16} aria-hidden />{' '}
             {t('Сообщения в звонке', 'Қоңыраудағы хабарламалар')}
           </h3>
